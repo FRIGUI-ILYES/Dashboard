@@ -1,0 +1,9 @@
+dash
+pandas
+numpy
+plotly
+scipy
+statsmodels
+dash-bootstrap-components
+scikit-learn
+prophet 
