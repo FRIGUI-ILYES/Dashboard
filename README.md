@@ -18,8 +18,8 @@ A modern, interactive dashboard for data analysis and machine learning, built wi
 ## Setup
 1. Clone this repository:
    ```bash
-   git clone <your-repo-url>
-   cd <repo-folder>
+   git clone <https://github.com/FRIGUI-ILYES/Dashboard>
+   cd <Dashboard>
    ```
 2. Install dependencies:
    ```bash
