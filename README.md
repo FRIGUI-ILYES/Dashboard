@@ -11,6 +11,7 @@
 * Upload and parse CSV or Excel files (with/without headers)
 * Interactive data tables with filtering and sorting
 * Export cleaned/processed data (CSV, Excel, JSON)
+![image](https://github.com/user-attachments/assets/6cf7f91a-a037-4e56-b25d-c91f5539bbc4)
 
 ### 🧹 Data Cleaning & Preprocessing
 
@@ -18,12 +19,16 @@
 * Duplicate detection and removal
 * Outlier detection and handling
 * Data type conversion and automatic suggestions
+* ![image](https://github.com/user-attachments/assets/2032c436-4eb7-43cf-9cd0-cc4c96bf5342)
+
 
 ### 🔣 Data Encoding
 
 * One-Hot, Label, and Ordinal encoding
 * Live preview of encoded datasets
 * Export ready-to-use encoded data
+* ![image](https://github.com/user-attachments/assets/5585af31-8899-47e8-8b39-8c5b379dcdbd)
+
 
 ### 📊 Exploratory Data Analysis (EDA)
 
@@ -37,18 +42,23 @@
 * Chi-squared, T-test, ANOVA, and more
 * Tabular + visual test result summaries
 * p-values, effect sizes, and assumptions
+![image](https://github.com/user-attachments/assets/e63ff5e0-0cc0-4c22-a1ee-47778a6b19ed)
 
 ### 📈 Regression Analysis
 
 * Linear regression modeling with metrics
 * Equation display and model fit visualization
 * Confidence intervals for prediction
+* ![image](https://github.com/user-attachments/assets/ef98f81f-56cd-43af-8ef1-ce362db6795c)
+
 
 ### 🌲 Machine Learning: Random Forest
 
 * Model training and performance metrics
 * Feature importance visualization
 * Predict with form input or uploaded files
+* ![image](https://github.com/user-attachments/assets/2272a629-1f31-47ac-b079-5f8119ec320d)
+
 
 ### ⏳ Time Series Analysis
 
@@ -59,6 +69,8 @@
 
 * Auto-generated EDA reports
 * Summary of key insights
+* ![Uploading image.png…]()
+
 
 ### 🎨 Modern UI/UX
 
