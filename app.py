@@ -17,6 +17,7 @@ from dash import dcc, html, Input, Output, State, dash_table
 from plotly.subplots import make_subplots
 import statsmodels.api as sm
 from scipy.stats import gaussian_kde
+from sklearn.preprocessing import LabelEncoder
 
 # Suppress warnings
 warnings.filterwarnings("ignore")
@@ -30,7 +31,7 @@ prophet_module = None
 def get_sklearn(module_name=None):
     """Lazy import for sklearn modules - imports only when a specific module is requested"""
     global sklearn_modules
-    
+
     if module_name == 'LinearRegression' and 'LinearRegression' not in sklearn_modules:
         from sklearn.linear_model import LinearRegression
         sklearn_modules['LinearRegression'] = LinearRegression
@@ -52,7 +53,7 @@ def get_sklearn(module_name=None):
     elif module_name == 'train_test_split' and 'train_test_split' not in sklearn_modules:
         from sklearn.model_selection import train_test_split
         sklearn_modules['train_test_split'] = train_test_split
-    
+
     if module_name:
         if module_name not in sklearn_modules:
             return None
@@ -62,7 +63,7 @@ def get_sklearn(module_name=None):
 def get_scipy(module_name=None):
     """Lazy import for scipy modules"""
     global scipy_modules
-    
+
     # Only import a specific module when requested
     if module_name == 'chi2_contingency' and 'chi2_contingency' not in scipy_modules:
         try:
@@ -74,35 +75,35 @@ def get_scipy(module_name=None):
             import importlib
             stats_module = importlib.import_module('scipy.stats')
             scipy_modules['chi2_contingency'] = getattr(stats_module, 'chi2_contingency')
-    
+
     elif module_name == 'ttest_ind' and 'ttest_ind' not in scipy_modules:
         from scipy.stats import ttest_ind
         scipy_modules['ttest_ind'] = ttest_ind
-    
+
     elif module_name == 'f_oneway' and 'f_oneway' not in scipy_modules:
         from scipy.stats import f_oneway
         scipy_modules['f_oneway'] = f_oneway
-        
+
     elif module_name == 'pearsonr' and 'pearsonr' not in scipy_modules:
         from scipy.stats import pearsonr
         scipy_modules['pearsonr'] = pearsonr
-        
+
     elif module_name == 'spearmanr' and 'spearmanr' not in scipy_modules:
         from scipy.stats import spearmanr
         scipy_modules['spearmanr'] = spearmanr
-        
+
     elif module_name == 'probplot' and 'probplot' not in scipy_modules:
         from scipy.stats import probplot
         scipy_modules['probplot'] = probplot
-        
+
     elif module_name == 'gaussian_kde' and 'gaussian_kde' not in scipy_modules:
         from scipy.stats import gaussian_kde
         scipy_modules['gaussian_kde'] = gaussian_kde
-        
+
     elif module_name == 'stats' and 'stats' not in scipy_modules:
         import scipy.stats
         scipy_modules['stats'] = scipy.stats
-    
+
     if module_name:
         if module_name not in scipy_modules:
             return None
@@ -112,7 +113,7 @@ def get_scipy(module_name=None):
 def get_statsmodels(module_name=None):
     """Lazy import for statsmodels modules - imports only when a specific module is requested"""
     global statsmodels_modules
-    
+
     if module_name == 'api' and 'api' not in statsmodels_modules:
         import statsmodels.api as sm
         statsmodels_modules['api'] = sm
@@ -125,7 +126,7 @@ def get_statsmodels(module_name=None):
     elif module_name == 'ARIMA' and 'ARIMA' not in statsmodels_modules:
         from statsmodels.tsa.arima.model import ARIMA
         statsmodels_modules['ARIMA'] = ARIMA
-    
+
     if module_name:
         if module_name not in statsmodels_modules:
             return None
@@ -135,7 +136,7 @@ def get_statsmodels(module_name=None):
 def get_prophet():
     """Lazy import for Prophet - only imports when needed and caches the result"""
     global prophet_module
-    
+
     if prophet_module is None:
         try:
             # Only attempt to import if it hasn't been tried before
@@ -144,7 +145,7 @@ def get_prophet():
         except ImportError:
             # If Prophet is not installed, cache the failure so we don't try again
             prophet_module = False
-    
+
     # Return the module or None if import failed
     return prophet_module if prophet_module is not False else None
 
@@ -193,41 +194,42 @@ app.index_string = '''
                 --nav-button-hover-bg: rgba(26, 188, 156, 0.08);
                 --nav-active-bg: #15283f;
                 --active-indicator: #1abc9c;
+                --category-heading: #767f88;
             }
-            
+
             body {
                 background-color: var(--dark-bg);
                 color: var(--text-primary);
                 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             }
-            
+
             /* Override Bootstrap primary color */
             .btn-primary {
                 background-color: var(--primary) !important;
                 border-color: var(--primary) !important;
             }
-            
+
             .btn-primary:hover, .btn-primary:focus, .btn-primary:active {
                 background-color: var(--primary-hover) !important;
                 border-color: var(--primary-hover) !important;
                 transform: translateY(-1px);
                 box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
             }
-            
+
             /* FAQ Accordion Styling */
             .faq-accordion-item .accordion-button {
                 color: var(--primary) !important;
                 font-weight: 500 !important;
             }
-            
+
             .faq-accordion-item .accordion-button:not(.collapsed) {
                 background-color: var(--primary-light) !important;
             }
-            
+
             .faq-accordion-item .accordion-button:focus {
                 box-shadow: 0 0 0 0.25rem var(--primary-shadow) !important;
             }
-            
+
             /* Card styling */
             .card {
                 background-color: var(--card-bg) !important;
@@ -237,18 +239,18 @@ app.index_string = '''
                 transition: transform var(--transition-speed), box-shadow var(--transition-speed) !important;
                 overflow: hidden !important;
             }
-            
+
             .card:hover {
                 transform: translateY(-2px) !important;
                 box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15) !important;
             }
-            
+
             .card-header {
                 background-color: rgba(0, 0, 0, 0.2) !important;
                 border-bottom: 1px solid var(--border-color) !important;
                 font-weight: 600 !important;
             }
-            
+
             /* Enhanced Nav styling */
             .nav-button {
                 transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
@@ -266,7 +268,7 @@ app.index_string = '''
                 font-size: 14px !important;
                 letter-spacing: 0.3px !important;
             }
-            
+
             .nav-button::before {
                 content: "" !important;
                 position: absolute !important;
@@ -274,26 +276,26 @@ app.index_string = '''
                 left: -100% !important;
                 width: 100% !important;
                 height: 100% !important;
-                background: linear-gradient(90deg, 
-                    rgba(26, 188, 156, 0.0) 0%, 
-                    rgba(26, 188, 156, 0.1) 50%, 
+                background: linear-gradient(90deg,
+                    rgba(26, 188, 156, 0.0) 0%,
+                    rgba(26, 188, 156, 0.1) 50%,
                     rgba(26, 188, 156, 0.0) 100%) !important;
                 transition: all 0.5s ease !important;
                 z-index: -1 !important;
             }
-            
+
             .nav-button:hover {
                 background-color: var(--nav-button-hover-bg) !important;
                 color: var(--primary) !important;
                 transform: translateX(5px) !important;
                 box-shadow: 0 2px 8px rgba(26, 188, 156, 0.15) !important;
             }
-            
+
             .nav-button:hover::before {
                 left: 100% !important;
                 transition: all 0.5s ease !important;
             }
-            
+
             .nav-button.active {
                 background-color: var(--nav-active-bg) !important;
                 color: var(--nav-active-color) !important;
@@ -302,7 +304,7 @@ app.index_string = '''
                 box-shadow: 0 2px 10px rgba(26, 188, 156, 0.2) !important;
                 animation: subtle-glow 2s infinite alternate !important;
             }
-            
+
             .nav-button.active::after {
                 content: "" !important;
                 position: absolute !important;
@@ -313,39 +315,39 @@ app.index_string = '''
                 background-color: var(--active-indicator) !important;
                 animation: border-pulse 2s infinite !important;
             }
-            
+
             .nav-button.active::before {
                 animation: nav-hover-animation 3s ease infinite !important;
-                background: linear-gradient(90deg, 
-                    rgba(26, 188, 156, 0.0) 0%, 
-                    rgba(26, 188, 156, 0.15) 50%, 
+                background: linear-gradient(90deg,
+                    rgba(26, 188, 156, 0.0) 0%,
+                    rgba(26, 188, 156, 0.15) 50%,
                     rgba(26, 188, 156, 0.0) 100%) !important;
                 background-size: 200% 100% !important;
                 left: 0 !important;
             }
-            
+
             @keyframes subtle-glow {
                 0% { box-shadow: 0 2px 10px rgba(26, 188, 156, 0.2); }
                 100% { box-shadow: 0 4px 15px rgba(26, 188, 156, 0.5); }
             }
-            
+
             @keyframes slide-in {
                 0% { transform: translateX(-20px); opacity: 0; }
                 100% { transform: translateX(0); opacity: 1; }
             }
-            
+
             @keyframes nav-hover-animation {
                 0% { background-position: 0% 50%; }
                 50% { background-position: 100% 50%; }
                 100% { background-position: 0% 50%; }
             }
-            
+
             @keyframes icon-pulse {
                 0% { transform: scale(1); }
                 50% { transform: scale(1.2); }
                 100% { transform: scale(1); }
             }
-            
+
             @keyframes border-glow {
                 0% { border-color: rgba(26, 188, 156, 0.6); }
                 50% { border-color: rgba(26, 188, 156, 1); }
@@ -360,14 +362,14 @@ app.index_string = '''
                 color: rgba(255, 255, 255, 0.8) !important;
                 text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
             }
-            
+
             .nav-button:hover i {
                 transform: scale(1.2) !important;
                 color: var(--primary) !important;
                 animation: icon-pulse 1.5s infinite !important;
                 text-shadow: 0 0 8px rgba(26, 188, 156, 0.5) !important;
             }
-            
+
             .nav-button.active i {
                 color: var(--primary) !important;
                 animation: icon-pulse 2s infinite !important;
@@ -379,12 +381,12 @@ app.index_string = '''
                 50% { transform: scale(1.3); }
                 100% { transform: scale(1.2); }
             }
-            
+
             /* Nav divider effect */
             .nav-pills {
                 position: relative !important;
             }
-            
+
             .nav-pills::after {
                 content: "";
                 position: absolute;
@@ -394,14 +396,14 @@ app.index_string = '''
                 height: 1px;
                 background: linear-gradient(90deg, transparent, var(--border-color), transparent);
             }
-            
+
             /* Custom components */
-            input[type="checkbox"]:checked, 
+            input[type="checkbox"]:checked,
             .custom-control-input:checked ~ .custom-control-label::before {
                 background-color: var(--primary) !important;
                 border-color: var(--primary) !important;
             }
-            
+
             /* Dropdowns */
             .dropdown-menu {
                 background-color: var(--card-bg) !important;
@@ -410,84 +412,111 @@ app.index_string = '''
                 border-radius: 8px !important;
                 overflow: hidden !important;
             }
-            
+
             .dropdown-item:hover, .dropdown-item:focus {
                 background-color: var(--primary-light) !important;
                 color: var(--primary) !important;
             }
-            
+
             /* Dash dropdown specific styling */
             .Select-control, .Select--single > .Select-control .Select-value {
-                background-color: var(--card-bg) !important;
+                background-color: #16213e !important;
                 color: var(--text-primary) !important;
-                border: 1px solid var(--border-color) !important;
+                border: 1px solid rgba(255, 255, 255, 0.1) !important;
                 border-radius: 8px !important;
                 box-shadow: none !important;
+                height: 40px !important;
+                padding: 4px 8px !important;
+                display: flex !important;
+                align-items: center !important;
             }
-            
+
             .Select-control:hover, .is-focused:not(.is-open) > .Select-control {
                 border-color: var(--primary) !important;
                 box-shadow: 0 0 0 1px var(--primary-shadow) !important;
             }
-            
+
             .Select.is-focused > .Select-control {
                 background-color: var(--card-bg) !important;
             }
-            
+
             .Select-menu-outer {
                 background-color: var(--card-bg) !important;
                 border: 1px solid var(--border-color) !important;
                 border-radius: 8px !important;
                 margin-top: 4px !important;
                 box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
+                z-index: 9999 !important; /* Ensure high z-index for all dropdown menus */
+                position: absolute !important;
+                width: 100% !important;
+                max-height: 300px !important; /* Ensure enough height for options */
             }
-            
+
             .Select-option {
                 background-color: var(--card-bg) !important;
                 color: var(--text-primary) !important;
                 padding: 10px 16px !important;
+                white-space: nowrap !important;
+                overflow: hidden !important;
+                text-overflow: ellipsis !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
             }
-            
+
             .Select-option.is-selected {
                 background-color: var(--primary-light) !important;
                 color: var(--primary) !important;
             }
-            
+
             .Select-option:hover, .Select-option.is-focused {
                 background-color: var(--primary-light) !important;
                 color: var(--primary) !important;
             }
-            
+
             .Select-value-label, .Select-value-label > span {
                 color: var(--text-primary) !important;
+                font-size: 14px !important;
+                font-weight: normal !important;
+                padding: 2px 0 !important;
             }
-            
+
+            .Select-value {
+                padding-left: 8px !important;
+                display: flex !important;
+                align-items: center !important;
+            }
+
             .Select-placeholder {
                 color: var(--text-secondary) !important;
             }
-            
+
             .Select-clear-zone {
                 color: var(--text-secondary) !important;
             }
-            
+
             .Select-clear-zone:hover {
                 color: #e74c3c !important;
             }
-            
+
             .Select-arrow {
                 border-color: var(--text-secondary) transparent transparent !important;
+                border-width: 5px 5px 2.5px !important;
+                margin-top: -2.5px !important;
+                opacity: 0.7 !important;
             }
-            
+
             .Select.is-open > .Select-control .Select-arrow {
                 border-color: transparent transparent var(--primary) !important;
+                border-width: 2.5px 5px 5px !important;
+                margin-top: -2.5px !important;
             }
-            
+
             /* VirtualizedSelect specific styles */
             .VirtualizedSelectOption {
                 background-color: var(--card-bg) !important;
                 color: var(--text-primary) !important;
             }
-            
+
             .VirtualizedSelectFocusedOption {
                 background-color: var(--primary-light) !important;
                 color: var(--primary) !important;
@@ -499,7 +528,7 @@ app.index_string = '''
                 border-radius: 8px !important;
                 overflow: hidden !important;
             }
-            
+
             .table thead th {
                 background-color: rgba(0, 0, 0, 0.2) !important;
                 color: var(--primary) !important;
@@ -508,31 +537,31 @@ app.index_string = '''
                 font-size: 0.8rem !important;
                 letter-spacing: 0.5px !important;
             }
-            
+
             .table tbody tr:hover {
                 background-color: rgba(26, 188, 156, 0.05) !important;
             }
-            
+
             /* Scrollbar styling */
             ::-webkit-scrollbar {
                 width: 8px;
                 height: 8px;
             }
-            
+
             ::-webkit-scrollbar-track {
                 background: rgba(0, 0, 0, 0.2);
                 border-radius: 10px;
             }
-            
+
             ::-webkit-scrollbar-thumb {
                 background: rgba(255, 255, 255, 0.2);
                 border-radius: 10px;
             }
-            
+
             ::-webkit-scrollbar-thumb:hover {
                 background: var(--primary);
             }
-            
+
             @keyframes pulse {
                 0% {
                     box-shadow: 0 0 0 0 var(--primary-shadow);
@@ -544,7 +573,7 @@ app.index_string = '''
                     box-shadow: 0 0 0 0 rgba(26, 188, 156, 0);
                 }
             }
-            
+
             /* Form controls */
             .form-control, .form-select {
                 background-color: rgba(0, 0, 0, 0.2) !important;
@@ -552,12 +581,12 @@ app.index_string = '''
                 color: var(--text-primary) !important;
                 border-radius: 8px !important;
             }
-            
+
             .form-control:focus, .form-select:focus {
                 border-color: var(--primary) !important;
                 box-shadow: 0 0 0 0.25rem var(--primary-shadow) !important;
             }
-            
+
             /* Upload styling */
             .upload-area {
                 border: 2px dashed var(--border-color) !important;
@@ -565,27 +594,27 @@ app.index_string = '''
                 background-color: rgba(0, 0, 0, 0.2) !important;
                 transition: all var(--transition-speed) !important;
             }
-            
+
             .upload-area:hover {
                 border-color: var(--primary) !important;
                 background-color: rgba(26, 188, 156, 0.05) !important;
             }
-            
+
             /* Dash table styling */
             .dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner table {
                 background-color: var(--card-bg) !important;
             }
-            
+
             .dash-table-container .dash-spreadsheet-container .dash-spreadsheet-inner th {
                 background-color: rgba(0, 0, 0, 0.2) !important;
                 color: var(--primary) !important;
             }
-            
+
             .dash-cell-value {
                 background-color: var(--card-bg) !important;
                 color: var(--text-primary) !important;
             }
-            
+
             .dash-filter, .dash-spreadsheet input {
                 background-color: var(--card-bg) !important;
                 color: var(--text-primary) !important;
@@ -619,6 +648,96 @@ app.index_string = '''
                 0% { border-color: rgba(26, 188, 156, 0.7); }
                 50% { border-color: rgba(26, 188, 156, 1); }
                 100% { border-color: rgba(26, 188, 156, 0.7); }
+            }
+
+            /* Nav category styles */
+            .nav-category {
+                margin-bottom: 15px !important;
+                position: relative !important;
+            }
+
+            .nav-category-title {
+                font-size: 11px !important;
+                font-weight: 500 !important;
+                letter-spacing: 1px !important;
+                color: var(--category-heading) !important;
+                padding-left: 15px !important;
+                margin-bottom: 8px !important;
+                text-transform: uppercase !important;
+                position: relative !important;
+                display: flex !important;
+                align-items: center !important;
+            }
+
+            .nav-category-title::before {
+                content: "" !important;
+                height: 3px !important;
+                width: 3px !important;
+                border-radius: 50% !important;
+                background: var(--primary) !important;
+                display: inline-block !important;
+                margin-right: 8px !important;
+                box-shadow: 0 0 5px var(--primary) !important;
+            }
+
+            .nav-category .nav-pills {
+                padding-left: 8px !important;
+            }
+
+            @keyframes subtle-glow {
+                0% { box-shadow: 0 2px 10px rgba(26, 188, 156, 0.2); }
+                100% { box-shadow: 0 4px 15px rgba(26, 188, 156, 0.5); }
+            }
+
+            @keyframes slide-in {
+                0% { transform: translateX(-20px); opacity: 0; }
+                100% { transform: translateX(0); opacity: 1; }
+            }
+
+            @keyframes nav-hover-animation {
+                0% { background-position: 0% 50%; }
+                50% { background-position: 100% 50%; }
+                100% { background-position: 0% 50%; }
+            }
+
+            @keyframes icon-pulse {
+                0% { transform: scale(1); }
+                50% { transform: scale(1.2); }
+                100% { transform: scale(1); }
+            }
+
+            @keyframes border-glow {
+                0% { border-color: rgba(26, 188, 156, 0.6); }
+                50% { border-color: rgba(26, 188, 156, 1); }
+                100% { border-color: rgba(26, 188, 156, 0.6); }
+            }
+
+            .nav-button i {
+                transition: transform 0.3s cubic-bezier(0.68, -0.55, 0.265, 1.55) !important;
+                margin-right: 12px !important;
+                width: 20px !important;
+                text-align: center !important;
+                color: rgba(255, 255, 255, 0.8) !important;
+                text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2) !important;
+            }
+
+            .nav-button:hover i {
+                transform: scale(1.2) !important;
+                color: var(--primary) !important;
+                animation: icon-pulse 1.5s infinite !important;
+                text-shadow: 0 0 8px rgba(26, 188, 156, 0.5) !important;
+            }
+
+            .nav-button.active i {
+                color: var(--primary) !important;
+                animation: icon-pulse 2s infinite !important;
+                text-shadow: 0 0 10px rgba(26, 188, 156, 0.6) !important;
+            }
+
+            @keyframes pulse-icon {
+                0% { transform: scale(1); }
+                50% { transform: scale(1.3); }
+                100% { transform: scale(1.2); }
             }
         </style>
     </head>
@@ -726,23 +845,46 @@ custom_css = {
     },
     "dropdown": {
         "backgroundColor": "#16213e",
-        "border": "1px solid #2a3a5e",
+        "border": "1px solid rgba(255, 255, 255, 0.1)",
         "color": "#FFFFFF", # Changed from #CCCCCC to #FFFFFF for better visibility
-        "padding": "8px 12px", # Added padding for better spacing
+        "padding": "4px 8px", # Adjusted padding for better spacing
         "fontSize": "14px", # Added font size
         "lineHeight": "1.5", # Improved line height to prevent overlap
+        "zIndex": "1000", # Ensure dropdown appears above other elements
+        "height": "40px", # Fixed height for consistency
+        "fontWeight": "normal", # Normal font weight for better readability
+        "textAlign": "left", # Left align text
+        "borderRadius": "8px", # Consistent border radius
+        "boxShadow": "0 2px 5px rgba(0, 0, 0, 0.2)", # Subtle shadow
     },
     "dropdown_menu": {
         "backgroundColor": "#16213e",
-        "border": "1px solid #2a3a5e",
+        "border": "1px solid rgba(255, 255, 255, 0.1)",
+        "zIndex": "9999", # Very high z-index to ensure it appears on top of everything
+        "boxShadow": "0 4px 8px rgba(0, 0, 0, 0.3)",
+        "borderRadius": "8px",
+        "marginTop": "5px",
+        "width": "220px", # Match dropdown width
+        "position": "absolute", # Ensure proper positioning
+        "display": "block", # Always display as block
+        "opacity": "1", # Full opacity
+        "padding": "4px 0", # Add padding for better spacing
     },
     "dropdown_item": {
-        "color": "#CCCCCC",
+        "color": "#FFFFFF",
         "backgroundColor": "#16213e",
+        "padding": "8px 12px",
+        "fontSize": "14px",
+        "fontWeight": "normal",
+        "borderBottom": "1px solid rgba(255, 255, 255, 0.05)",
+        "transition": "all 0.2s ease",
+        "cursor": "pointer",
     },
     "dropdown_item_hover": {
         "color": "#ffffff",
-        "backgroundColor": "#0f3460",
+        "backgroundColor": "rgba(26, 188, 156, 0.2)",
+        "borderLeft": "3px solid #1abc9c",
+        "transition": "all 0.2s ease",
     },
     "nav_button": {
         "backgroundColor": "var(--nav-button-bg)",
@@ -809,7 +951,7 @@ def apply_dark_theme(fig):
         "#1f3a93",  # Dark blue
         "#26c281",  # Mint
     ]
-    
+
     # Update layout with improved styling
     fig.update_layout(
         template="plotly_dark",
@@ -856,11 +998,11 @@ def apply_dark_theme(fig):
             font_family="-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Helvetica, Arial, sans-serif"
         )
     )
-    
+
     # Color palette setting for different trace types
     for i, trace in enumerate(fig.data):
         color_idx = i % len(custom_colors)
-        
+
         if trace.type == 'scatter':
             if hasattr(trace, 'marker') and trace.marker is not None:
                 fig.data[i].marker.color = custom_colors[color_idx]
@@ -869,7 +1011,7 @@ def apply_dark_theme(fig):
         elif trace.type == 'heatmap':
             # Create a custom colorscale using the theme colors
             fig.data[i].colorscale = [[0, "var(--dark-bg)"], [0.5, "#16a085"], [1, "#1abc9c"]]
-    
+
     # Add subtle gradient background
     fig.update_layout(
         shapes=[
@@ -883,7 +1025,7 @@ def apply_dark_theme(fig):
             )
         ]
     )
-    
+
     return fig
 
 # Helper functions for data type detection
@@ -891,47 +1033,47 @@ def is_possible_datetime(series):
     """Check if a series could be converted to datetime"""
     if pd.api.types.is_datetime64_any_dtype(series):
         return True
-    
+
     # Handle empty series or series with no non-null values
     non_null = series.dropna()
     if len(non_null) == 0:
         return False
-    
+
     # Take a sample of up to 100 non-null values
     sample_size = min(100, len(non_null))
     sample = non_null.sample(sample_size) if sample_size > 0 else non_null
-    
+
     try:
         pd.to_datetime(sample, errors='raise')
         return True
     except:
         pass
-    
+
     # Check for common date formats
     date_formats = [
         '%Y-%m-%d', '%m/%d/%Y', '%d/%m/%Y', '%Y/%m/%d',
-        '%Y-%m-%d %H:%M:%S', '%m/%d/%Y %H:%M:%S', 
+        '%Y-%m-%d %H:%M:%S', '%m/%d/%Y %H:%M:%S',
         '%d/%m/%Y %H:%M:%S', '%Y/%m/%d %H:%M:%S'
     ]
-    
+
     for fmt in date_formats:
         try:
             sample.apply(lambda x: datetime.strptime(str(x), fmt))
             return True
         except:
             continue
-    
+
     return False
 
 def is_possible_numeric(series):
     """Check if a series could be converted to numeric"""
     if pd.api.types.is_numeric_dtype(series):
         return True
-    
+
     sample = series.dropna().sample(min(100, len(series)))
     if len(sample) == 0:
         return False
-    
+
     try:
         pd.to_numeric(sample, errors='raise')
         return True
@@ -942,22 +1084,22 @@ def is_possible_boolean(series):
     """Check if a series could be converted to boolean"""
     if pd.api.types.is_bool_dtype(series):
         return True
-    
+
     sample = series.dropna().sample(min(100, len(series)))
     if len(sample) == 0:
         return False
-    
+
     # Check for common boolean representations
     true_values = ['true', 't', 'yes', 'y', '1']
     false_values = ['false', 'f', 'no', 'n', '0']
-    
+
     try:
         normalized = sample.str.lower().str.strip()
         if all(x in true_values + false_values for x in normalized if pd.notna(x)):
             return True
     except:
         pass
-    
+
     return False
 
 def detect_data_type(series):
@@ -980,10 +1122,10 @@ def detect_data_type(series):
 def get_conversion_suggestion(series, current_type):
     """Get suggestion for converting a series to a more appropriate type"""
     detected_type = detect_data_type(series)
-    
+
     if detected_type == current_type:
         return None
-    
+
     if detected_type == 'datetime':
         return {
             'from': current_type,
@@ -1012,150 +1154,296 @@ def get_conversion_suggestion(series, current_type):
             'method': "astype('category')",
             'example': "df['column'].astype('category')"
         }
-    
+
     return None
+
+# --- Encoding Section Layout ---
+html.Div([
+    dbc.Row([
+        dbc.Col([
+            html.Strong("Encoding Options", style={"color": "#1abc9c", "marginBottom": "10px"}),
+            html.Div([
+                html.Label("Column to Encode:", style={"color": "#e6e6e6", "marginRight": "10px"}),
+                dcc.Dropdown(
+                    id="encoding-column-dropdown",
+                    options=[],
+                    placeholder="Select column",
+                    style={"backgroundColor": "#1a1a2e", "color": "#e6e6e6", "marginBottom": "10px"}
+                )
+            ], style={"marginBottom": "15px"}),
+            html.Div([
+                html.Label("Encoding Type:", style={"color": "#e6e6e6", "marginRight": "10px"}),
+                dcc.Dropdown(
+                    id="encoding-type-dropdown",
+                    options=[
+                        {"label": "One-Hot Encoding", "value": "onehot"},
+                        {"label": "Ordinal Encoding", "value": "ordinal"}
+                    ],
+                    placeholder="Select encoding type",
+                    style={"backgroundColor": "#1a1a2e", "color": "#e6e6e6"}
+                )
+            ], style={"marginBottom": "15px"}),
+            html.Div(id="ordinal-order-container", style={"marginBottom": "15px"}),
+            dbc.Button("Apply Encoding", id="apply-encoding-button", color="primary", style={"marginBottom": "15px", "width": "100%"}),
+            html.Div(id="encoding-message", style={"marginBottom": "15px"}),
+        ], width=12)
+    ], className="mb-4"),
+    dbc.Row([
+        dbc.Col([
+            html.Strong("Preview of Encoded Data:", style={"color": "#1abc9c", "marginBottom": "10px"}),
+            html.Div([
+                html.Label("Display:", style={"color": "#e6e6e6", "marginRight": "10px"}),
+                dcc.Dropdown(
+                    id="encoded-preview-dropdown",
+                    options=[
+                        {"label": "Full DataFrame", "value": "full"},
+                        {"label": "Head (first 5 rows)", "value": "head"},
+                        {"label": "Tail (last 5 rows)", "value": "tail"}
+                    ],
+                    value="full",
+                    clearable=False,
+                    style={"width": "220px", "backgroundColor": "#1a1a2e", "color": "#e6e6e6", "marginBottom": "10px"}
+                )
+            ], style={"marginBottom": "10px", "display": "flex", "alignItems": "center"}),
+            dash_table.DataTable(
+                id="encoded-preview-table",
+                style_table={"overflowX": "auto", "backgroundColor": "#16213e"},
+                style_header={"backgroundColor": "#0f3460", "color": "#ffffff", "fontWeight": "bold"},
+                style_cell={"backgroundColor": "#16213e", "color": "#e6e6e6", "padding": "10px", "border": "1px solid #2a3a5e"},
+                page_size=10
+            )
+        ], width=12)
+    ], className="mb-4"),
+    dbc.Row([
+        dbc.Col([
+            html.Div([
+                dbc.Button("Download CSV", id="download-encoded-csv-button", color="success", style={"marginRight": "10px"}),
+                dbc.Button("Download JSON", id="download-encoded-json-button", color="info", style={"marginRight": "10px"}),
+                dbc.Button("Download Excel", id="download-encoded-excel-button", color="warning"),
+                dcc.Download(id="download-encoded-csv"),
+                dcc.Download(id="download-encoded-json"),
+                dcc.Download(id="download-encoded-excel")
+            ], style={"marginTop": "10px", "textAlign": "center"})
+        ], width=12)
+    ], className="mb-4"),
+], style={"marginTop": "30px", "marginBottom": "30px"})
+
+# Callback to update the encoded data preview table based on dropdown selection
+@app.callback(
+    [
+        Output("encoded-preview-table", "data"),
+        Output("encoded-preview-table", "columns")
+    ],
+    [
+        Input("encoded-preview-dropdown", "value"),
+        Input("encoded-df-store", "data")
+    ]
+)
+def update_encoded_preview_table(preview_option, encoded_data):
+    import pandas as pd
+    if not encoded_data:
+        return [], []
+    df = pd.DataFrame(encoded_data)
+    if preview_option == "head":
+        df = df.head(5)
+    elif preview_option == "tail":
+        df = df.tail(5)
+    # else: full dataframe
+    columns = [{"name": col, "id": col} for col in df.columns]
+    data = df.to_dict("records")
+    return data, columns
 
 # Layout with updated styling
 app.layout = html.Div(style=custom_css["background"], children=[
     # Sidebar
     html.Div(style=custom_css["sidebar"], children=[
-        html.H4("Data Analysis", style={
-            "color": "var(--primary)",
-            "fontWeight": "600",
-            "padding": "15px 0 25px 0",
-            "textAlign": "center",
-            "borderBottom": "1px solid var(--border-color)",
-            "marginBottom": "25px",
-            "letterSpacing": "0.5px",
-            "textShadow": "0 0 10px var(--primary-shadow)",
-            "animation": "title-glow 3s infinite alternate",
-            "background": "linear-gradient(90deg, #1abc9c, #16a085, #1abc9c)",
-            "backgroundSize": "200% auto",
-            "WebkitBackgroundClip": "text",
-            "WebkitTextFillColor": "transparent",
-            "backgroundClip": "text"
-        }),
-        dbc.Nav([
-            dbc.NavLink(
-                [
-                    html.I(className="fas fa-home mr-2"),
-                    "Welcome"
-                ], 
-                id="welcome-button", 
-                href="#", 
-                active=True, 
-                style=custom_css["nav_button"],
-                className="nav-button active"
-            ),
-            dbc.NavLink(
-                [
-                    html.I(className="fas fa-upload mr-2"),
-                    "Import Data"
-                ], 
-                id="import-button", 
-                href="#", 
-                active=False, 
-                style=custom_css["nav_button"],
-                className="nav-button"
-            ),
-            dbc.NavLink(
-                [
-                    html.I(className="fas fa-table mr-2"),
-                    "Summary"
-                ], 
-                id="summary-button", 
-                href="#",
-                style=custom_css["nav_button"],
-                className="nav-button"
-            ),
-            dbc.NavLink(
-                [
-                    html.I(className="fas fa-fill-drip mr-2"),
-                    "Imputation"
-                ], 
-                id="imputation-button", 
-                href="#",
-                style=custom_css["nav_button"],
-                className="nav-button"
-            ),
-            dbc.NavLink(
-                [
-                    html.I(className="fas fa-chart-pie mr-2"),
-                    "Statistics"
-                ], 
-                id="statistics-button", 
-                href="#",
-                style=custom_css["nav_button"],
-                className="nav-button"
-            ),
-            dbc.NavLink(
-                [
-                    html.I(className="fas fa-link mr-2"),
-                    "Correlation"
-                ], 
-                id="correlation-button", 
-                href="#",
-                style=custom_css["nav_button"],
-                className="nav-button"
-            ),
-            dbc.NavLink(
-                [
-                    html.I(className="fas fa-square-root-alt mr-2"),
-                    "Tests"
-                ], 
-                id="tests-button", 
-                href="#",
-                style=custom_css["nav_button"],
-                className="nav-button"
-            ),
-            dbc.NavLink(
-                [
-                    html.I(className="fas fa-chart-line mr-2"),
-                    "Linear Regression"
-                ], 
-                id="regression-button", 
-                href="#",
-                style=custom_css["nav_button"],
-                className="nav-button"
-            ),
-            dbc.NavLink(
-                [
-                    html.I(className="fas fa-file-alt mr-2"),
-                    "Report"
-                ], 
-                id="report-button", 
-                href="#",
-                style=custom_css["nav_button"],
-                className="nav-button"
-            ),
-            dbc.NavLink(
-                [
-                    html.I(className="fas fa-robot mr-2"),
-                    "Prediction"
-                ], 
-                id="prediction-button", 
-                href="#",
-                style=custom_css["nav_button"],
-                className="nav-button"
-            ),
-            dbc.NavLink(
-                [
-                    html.I(className="fas fa-question-circle mr-2"),
-                    "FAQ"
-                ], 
-                id="faq-button", 
-                href="#",
-                style=custom_css["nav_button"],
-                className="nav-button"
-            ),
-        ], vertical=True, pills=True, className="nav-pills", style={"marginBottom": "30px"}),
-        
-        # Add brand badge at the bottom of sidebar for a professional touch
+        # Header with enhanced styling
         html.Div([
-            html.Hr(style={"borderColor": "var(--border-color)", "margin": "10px 0"}),
-        ], style={"marginTop": "auto", "position": "absolute", "bottom": "20px", "width": "calc(100% - 30px)"})
+            html.H4("Data Analysis", style={
+                "color": "var(--primary)",
+                "fontWeight": "600",
+                "padding": "15px 0 20px 0",
+                "textAlign": "center",
+                "marginBottom": "10px",
+                "letterSpacing": "0.5px",
+                "textShadow": "0 0 10px var(--primary-shadow)",
+                "animation": "title-glow 3s infinite alternate",
+                "background": "linear-gradient(90deg, #1abc9c, #16a085, #1abc9c)",
+                "backgroundSize": "200% auto",
+                "WebkitBackgroundClip": "text",
+                "WebkitTextFillColor": "transparent",
+                "backgroundClip": "text"
+            }),
+            html.Div([
+                html.I(className="fas fa-chart-line", style={
+                    "color": "var(--primary)",
+                    "fontSize": "24px",
+                    "marginRight": "10px",
+                    "animation": "icon-pulse 2s infinite"
+                }),
+                html.Span("Dashboard", style={
+                    "color": "var(--text-secondary)",
+                    "fontSize": "16px",
+                    "letterSpacing": "0.5px"
+                })
+            ], style={
+                "display": "flex",
+                "alignItems": "center",
+                "justifyContent": "center",
+                "paddingBottom": "15px",
+                "borderBottom": "1px solid var(--border-color)",
+                "marginBottom": "20px",
+            }),
+        ]),
+
+        # Category Group - General
+        html.Div([
+            html.P("GENERAL", className="nav-category-title"),
+            dbc.Nav([
+                dbc.NavLink(
+                    [
+                        html.I(className="fas fa-home mr-2"),
+                        "Welcome"
+                    ],
+                    id="welcome-button",
+                    href="#",
+                    active=True,
+                    style=custom_css["nav_button"],
+                    className="nav-button active"
+                ),
+                dbc.NavLink(
+                    [
+                        html.I(className="fas fa-upload mr-2"),
+                        "Import Data"
+                    ],
+                    id="import-button",
+                    href="#",
+                    active=False,
+                    style=custom_css["nav_button"],
+                    className="nav-button"
+                ),
+                dbc.NavLink(
+                    [
+                        html.I(className="fas fa-table mr-2"),
+                        "Summary"
+                    ],
+                    id="summary-button",
+                    href="#",
+                    style=custom_css["nav_button"],
+                    className="nav-button"
+                ),
+                dbc.NavLink(
+                    [
+                        html.I(className="fas fa-link mr-2"),
+                        "Encoding"
+                    ],
+                    id="encoding-button",
+                    href="#",
+                    style=custom_css["nav_button"],
+                    className="nav-button"
+                ),
+            ], vertical=True, pills=True, className="nav-pills", style={"marginBottom": "20px"}),
+        ], className="nav-category"),
+
+        # Category Group - Data Processing
+        html.Div([
+            html.P("DATA PROCESSING", className="nav-category-title"),
+            dbc.Nav([
+                dbc.NavLink(
+                    [
+                        html.I(className="fas fa-fill-drip mr-2"),
+                        "Imputation"
+                    ],
+                    id="imputation-button",
+                    href="#",
+                    style=custom_css["nav_button"],
+                    className="nav-button"
+                ),
+            ], vertical=True, pills=True, className="nav-pills", style={"marginBottom": "20px"}),
+        ], className="nav-category"),
+
+        # Category Group - Analysis
+        html.Div([
+            html.P("ANALYSIS", className="nav-category-title"),
+            dbc.Nav([
+                dbc.NavLink(
+                    [
+                        html.I(className="fas fa-chart-pie mr-2"),
+                        "Statistics"
+                    ],
+                    id="statistics-button",
+                    href="#",
+                    style=custom_css["nav_button"],
+                    className="nav-button"
+                ),
+                dbc.NavLink(
+                    [
+                        html.I(className="fas fa-square-root-alt mr-2"),
+                        "Tests"
+                    ],
+                    id="tests-button",
+                    href="#",
+                    style=custom_css["nav_button"],
+                    className="nav-button"
+                ),
+            ], vertical=True, pills=True, className="nav-pills", style={"marginBottom": "20px"}),
+        ], className="nav-category"),
+
+        # Category Group - Advanced
+        html.Div([
+            html.P("ADVANCED", className="nav-category-title"),
+            dbc.Nav([
+                dbc.NavLink(
+                    [
+                        html.I(className="fas fa-chart-line mr-2"),
+                        "Linear Regression"
+                    ],
+                    id="regression-button",
+                    href="#",
+                    style=custom_css["nav_button"],
+                    className="nav-button"
+                ),
+                dbc.NavLink(
+                    [
+                        html.I(className="fas fa-robot mr-2"),
+                        "Prediction"
+                    ],
+                    id="prediction-button",
+                    href="#",
+                    style=custom_css["nav_button"],
+                    className="nav-button"
+                ),
+                dbc.NavLink(
+                    [
+                        html.I(className="fas fa-file-alt mr-2"),
+                        "Report"
+                    ],
+                    id="report-button",
+                    href="#",
+                    style=custom_css["nav_button"],
+                    className="nav-button"
+                ),
+            ], vertical=True, pills=True, className="nav-pills", style={"marginBottom": "20px"}),
+        ], className="nav-category"),
+
+        # Category Group - Help
+        html.Div([
+            html.P("HELP", className="nav-category-title"),
+            dbc.Nav([
+                dbc.NavLink(
+                    [
+                        html.I(className="fas fa-question-circle mr-2"),
+                        "FAQ"
+                    ],
+                    id="faq-button",
+                    href="#",
+                    style=custom_css["nav_button"],
+                    className="nav-button"
+                ),
+            ], vertical=True, pills=True, className="nav-pills", style={"marginBottom": "20px"}),
+        ], className="nav-category"),
     ]),
-    
+
     # Main Content
     html.Div(style=custom_css["content"], children=[
         # Welcome Page
@@ -1195,7 +1483,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
                 ])
             ], style=custom_css["card"]),
         ]),
-        
+
         # Import tab
         html.Div(id="import-content", style={"display": "block", "opacity": "1", "transition": "opacity 0.3s ease-in-out"}, children=[
             dbc.Card([
@@ -1212,8 +1500,8 @@ app.layout = html.Div(style=custom_css["background"], children=[
                         className="upload-area",
                     ),
                     html.Div(id="file-upload-status", style={
-                        "color": "#a3a3a3", 
-                        "textAlign": "center", 
+                        "color": "#a3a3a3",
+                        "textAlign": "center",
                         "marginBottom": "15px"
                     }),
                     dbc.Checklist(
@@ -1242,7 +1530,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
                         ],
                     ),
                     dbc.Button([
-                        html.I(className="fas fa-download mr-2"), 
+                        html.I(className="fas fa-download mr-2"),
                         "Download Data"
                     ], id="download-button", style=custom_css["button"]),
                     dcc.Download(id="download-data"),
@@ -1266,7 +1554,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
                 ]),
             ], style=custom_css["card"]),
         ]),
-        
+
         # Summary tab
         html.Div(id="summary-content", style={"display": "none", "opacity": "0", "transition": "opacity 0.3s ease-in-out"}, children=[
             dbc.Card([
@@ -1282,13 +1570,13 @@ app.layout = html.Div(style=custom_css["background"], children=[
                                             html.Div([
                                                 html.I(className="fas fa-list-ol fa-2x mr-2", style={"color": "var(--primary)"}),
                                                 html.H5("Number of Rows", className="mb-0", style={
-                                                    "fontSize": "16px", 
+                                                    "fontSize": "16px",
                                                     "fontWeight": "600",
                                                     "color": "var(--text-primary)",
                                                     "marginBottom": "5px"
                                                 }),
                                                 html.P(id="num-rows", className="mb-0", style={
-                                                    "fontSize": "24px", 
+                                                    "fontSize": "24px",
                                                     "fontWeight": "700",
                                                     "color": "var(--primary)",
                                                     "textShadow": "0 0 5px var(--primary-shadow)"
@@ -1299,13 +1587,13 @@ app.layout = html.Div(style=custom_css["background"], children=[
                                             html.Div([
                                                 html.I(className="fas fa-columns fa-2x mr-2", style={"color": "var(--primary)"}),
                                                 html.H5("Number of Columns", className="mb-0", style={
-                                                    "fontSize": "16px", 
+                                                    "fontSize": "16px",
                                                     "fontWeight": "600",
                                                     "color": "var(--text-primary)",
                                                     "marginBottom": "5px"
                                                 }),
                                                 html.P(id="num-cols", className="mb-0", style={
-                                                    "fontSize": "24px", 
+                                                    "fontSize": "24px",
                                                     "fontWeight": "700",
                                                     "color": "var(--primary)",
                                                     "textShadow": "0 0 5px var(--primary-shadow)"
@@ -1360,9 +1648,9 @@ app.layout = html.Div(style=custom_css["background"], children=[
                     dbc.Row([
                         dbc.Col(
                             dbc.Alert(
-                                id="summary-error", 
-                                color="danger", 
-                                is_open=False, 
+                                id="summary-error",
+                                color="danger",
+                                is_open=False,
                                 duration=4000
                             ),
                             width=12
@@ -1371,7 +1659,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
                 ]),
             ], style=custom_css["card"]),
         ]),
-        
+
         # Imputation tab
         html.Div(id="imputation-content", style={"display": "none", "opacity": "0", "transition": "opacity 0.3s ease-in-out"}, children=[
             dbc.Card([
@@ -1432,7 +1720,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
                                             color="primary",
                                             className="mt-2",
                                             style={
-                                                "backgroundColor": "#1abc9c", 
+                                                "backgroundColor": "#1abc9c",
                                                 "border": "none",
                                                 "width": "100%",
                                                 "padding": "12px",
@@ -1451,9 +1739,9 @@ app.layout = html.Div(style=custom_css["background"], children=[
                                         icon="success",
                                         duration=4000,
                                         style={
-                                            "position": "fixed", 
-                                            "top": 10, 
-                                            "right": 10, 
+                                            "position": "fixed",
+                                            "top": 10,
+                                            "right": 10,
                                             "width": 350,
                                             "zIndex": 1999
                                         }
@@ -1467,9 +1755,9 @@ app.layout = html.Div(style=custom_css["background"], children=[
                                         icon="danger",
                                         duration=4000,
                                         style={
-                                            "position": "fixed", 
-                                            "top": 10, 
-                                            "right": 10, 
+                                            "position": "fixed",
+                                            "top": 10,
+                                            "right": 10,
                                             "width": 350,
                                             "zIndex": 1999
                                         }
@@ -1591,6 +1879,26 @@ app.layout = html.Div(style=custom_css["background"], children=[
                                             }
                                         ],
                                     ),
+                                    html.Div([
+                                        html.H6("Download Imputed Data", style={"marginTop": "20px", "marginBottom": "10px", "color": "#e6e6e6"}),
+                                        html.Div([
+                                            dbc.Button([
+                                                html.I(className="fas fa-file-csv mr-2"),
+                                                "CSV"
+                                            ], id="download-imputed-csv-button", color="success", style={"marginRight": "10px"}),
+                                            dbc.Button([
+                                                html.I(className="fas fa-file-code mr-2"),
+                                                "JSON"
+                                            ], id="download-imputed-json-button", color="info", style={"marginRight": "10px"}),
+                                            dbc.Button([
+                                                html.I(className="fas fa-file-excel mr-2"),
+                                                "Excel"
+                                            ], id="download-imputed-excel-button", color="warning"),
+                                        ], style={"display": "flex", "justifyContent": "center", "width": "100%"}),
+                                        dcc.Download(id="download-imputed-csv"),
+                                        dcc.Download(id="download-imputed-json"),
+                                        dcc.Download(id="download-imputed-excel"),
+                                    ], style={"marginTop": "15px", "textAlign": "center"}),
                                 ]),
                             ], style=custom_css["card"]),
                         ], width=12),
@@ -1598,7 +1906,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
                 ]),
             ], style=custom_css["card"]),
         ]),
-        
+
         # Statistics tab
         html.Div(id="statistics-content", style={"display": "none", "opacity": "0", "transition": "opacity 0.3s ease-in-out"}, children=[
             dbc.Card([
@@ -1608,13 +1916,13 @@ app.layout = html.Div(style=custom_css["background"], children=[
                     dbc.Row([
                         dbc.Col([
                             html.H4("Data Overview", style={"color": "#FFFFFF", "marginBottom": "20px"}),
-                            html.P("Automatically generated visualizations based on your data:", 
+                            html.P("Automatically generated visualizations based on your data:",
                                   style={"color": "#e6e6e6", "marginBottom": "20px"}),
                             dbc.Spinner(html.Div(id="auto-visualizations")),
                         ], width=12),
                     ]),
                     html.Hr(style={"borderColor": "#2a3a5e", "margin": "30px 0"}),
-                    
+
                     # Original custom plot controls section
                     html.H4("Custom Plot Controls", style={"color": "#FFFFFF", "marginBottom": "20px"}),
                     html.P("Create your own custom visualizations by selecting options below:",
@@ -1634,13 +1942,13 @@ app.layout = html.Div(style=custom_css["background"], children=[
                                             "display": "block"
                                         }),
                                         dcc.Dropdown(
-                                            id="x-axis-dropdown", 
+                                            id="x-axis-dropdown",
                                             placeholder="Select X-axis",
                                             style={"height": "40px", **custom_css["dropdown"]},
                                             className='dropdown-dark custom-dropdown'
                                         ),
                                     ]),
-                                    
+
                                     # Y-axis selection
                                     html.Div(className="form-group", style={"marginBottom": "25px"}, children=[
                                         html.Label("Select Y-axis (optional):", style={
@@ -1651,13 +1959,13 @@ app.layout = html.Div(style=custom_css["background"], children=[
                                             "display": "block"
                                         }),
                                         dcc.Dropdown(
-                                            id="y-axis-dropdown", 
+                                            id="y-axis-dropdown",
                                             placeholder="Select Y-axis",
                                             style={"height": "40px", **custom_css["dropdown"]},
                                             className='dropdown-dark custom-dropdown'
                                         ),
                                     ]),
-                                    
+
                                     # Plot type selection
                                     html.Div(className="form-group", style={"marginBottom": "25px"}, children=[
                                         html.Label("Select Plot Type:", style={
@@ -1693,7 +2001,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
                                             className='dropdown-dark custom-dropdown'
                                         ),
                                     ]),
-                                    
+
                                     # Bin size slider
                                     html.Div(id="bin-size-col", className="form-group", style={"marginBottom": "35px"}, children=[
                                         html.Label("Adjust Bin Size (for histograms):", style={
@@ -1710,12 +2018,12 @@ app.layout = html.Div(style=custom_css["background"], children=[
                                                 max=50,
                                                 step=5,
                                                 value=10,
-                                                marks={i: {"label": str(i), "style": {"color": "white", "font-size": "14px"}} 
+                                                marks={i: {"label": str(i), "style": {"color": "white", "font-size": "14px"}}
                                                       for i in range(5, 51, 5)},
                                             )
                                         ], style={"paddingTop": "15px", "paddingBottom": "15px", "paddingLeft": "10px", "paddingRight": "10px"}),
                                     ]),
-                                    
+
                                     # Time Series Controls (hidden by default)
                                     html.Div(id="time-series-controls", style={"display": "none", "marginBottom": "25px"}, children=[
                                         # Date column
@@ -1734,7 +2042,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
                                                 className='dropdown-dark custom-dropdown'
                                             ),
                                         ]),
-                                        
+
                                         # Value column
                                         html.Div(className="form-group", style={"marginBottom": "20px"}, children=[
                                             html.Label("Value Column:", style={
@@ -1751,7 +2059,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
                                                 className='dropdown-dark custom-dropdown'
                                             ),
                                         ]),
-                                        
+
                                         # Time series options
                                         html.Div(className="form-group", style={"marginBottom": "20px"}, children=[
                                             html.Label("Time Series Options:", style={
@@ -1773,7 +2081,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
                                                 style={"marginBottom": "20px", "color": "#e6e6e6"}
                                             ),
                                         ]),
-                                        
+
                                         # Moving average and seasonality
                                         dbc.Row([
                                             dbc.Col([
@@ -1814,7 +2122,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
                                             ], width=6),
                                         ]),
                                     ]),
-                                    
+
                                     # Scatter Matrix Controls (hidden by default)
                                     html.Div(id="scatter-matrix-controls", style={"display": "none", "marginBottom": "25px"}, children=[
                                         # Variables selection
@@ -1834,7 +2142,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
                                                 className='dropdown-dark custom-dropdown'
                                             ),
                                         ]),
-                                        
+
                                         # Color selection
                                         html.Div(className="form-group", style={"marginBottom": "20px"}, children=[
                                             html.Label("Color By (optional):", style={
@@ -1852,7 +2160,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
                                             ),
                                         ]),
                                     ]),
-                                    
+
                                     # 3D Plot Controls (hidden by default)
                                     html.Div(id="3d-plot-controls", style={"display": "none", "marginBottom": "25px"}, children=[
                                         # Z-axis column
@@ -1871,7 +2179,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
                                                 className='dropdown-dark custom-dropdown'
                                             ),
                                         ]),
-                                        
+
                                         # Color column
                                         html.Div(className="form-group", style={"marginBottom": "20px"}, children=[
                                             html.Label("Color Column (optional):", style={
@@ -1889,7 +2197,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
                                             ),
                                         ]),
                                     ]),
-                                    
+
                                     # Geographic Map Controls (hidden by default)
                                     html.Div(id="geo-plot-controls", style={"display": "none", "marginBottom": "25px"}, children=[
                                         # Location column
@@ -1908,7 +2216,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
                                                 className='dropdown-dark custom-dropdown'
                                             ),
                                         ]),
-                                        
+
                                         # Value column for geographic maps
                                         html.Div(className="form-group", style={"marginBottom": "20px"}, children=[
                                             html.Label("Value Column:", style={
@@ -1925,7 +2233,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
                                                 className='dropdown-dark custom-dropdown'
                                             ),
                                         ]),
-                                        
+
                                         # Geographic scope
                                         html.Div(className="form-group", style={"marginBottom": "20px"}, children=[
                                             html.Label("Map Scope:", style={
@@ -1950,7 +2258,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
                                             ),
                                         ]),
                                     ]),
-                                    
+
                                     # Forecast Controls (hidden by default)
                                     html.Div(id="forecast-controls", style={"display": "none", "marginBottom": "25px"}, children=[
                                         # Forecast model
@@ -1973,7 +2281,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
                                                 className='dropdown-dark custom-dropdown'
                                             ),
                                         ]),
-                                        
+
                                         # Forecast periods
                                         html.Div(className="form-group", style={"marginBottom": "20px"}, children=[
                                             html.Label("Forecast Periods:", style={
@@ -1992,7 +2300,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
                                             ),
                                         ]),
                                     ]),
-                                    
+
                                     # Statistical Plot Controls (hidden by default)
                                     html.Div(id="stat-plot-controls", style={"display": "none", "marginBottom": "25px"}, children=[
                                         # Reference distribution
@@ -2017,7 +2325,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
                                             ),
                                         ]),
                                     ]),
-                                    
+
                                     # Generate Plot button
                                     dbc.Button([
                                         html.I(className="fas fa-chart-bar mr-2"),
@@ -2039,113 +2347,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
                 ]),
             ], style=custom_css["card"]),
         ]),
-        
-        # Correlation tab 
-        html.Div(id="correlation-content", style={"display": "none", "opacity": "0", "transition": "opacity 0.3s ease-in-out"}, children=[
-            dbc.Card([
-                dbc.CardHeader("Correlation Analysis", style=custom_css["card_header"]),
-                dbc.CardBody([
-                    dbc.Row([
-                        dbc.Col([
-                            html.Div(
-                                "This section automatically displays four different correlation analyses to help you understand relationships in your data.",
-                                style={
-                                    "color": "var(--text-secondary)",
-                                    "textAlign": "center",
-                                    "marginBottom": "20px",
-                                    "fontSize": "16px"
-                                }
-                            ),
-                        ], width=12),
-                    ]),
-                    
-                    # Raw Numeric Correlation
-                    dbc.Row([
-                        dbc.Col([
-                            dbc.Card([
-                                dbc.CardHeader([
-                                    html.I(className="fas fa-calculator mr-2", style={"color": "var(--primary)"}),
-                                    "Raw Numeric Correlation",
-                                    html.Span(
-                                        "Only numeric columns, no encoding",
-                                        style={
-                                            "fontSize": "12px",
-                                            "color": "var(--text-secondary)",
-                                            "marginLeft": "10px",
-                                            "fontWeight": "normal"
-                                        }
-                                    ),
-                                ], style=custom_css["card_header"]),
-                                dbc.CardBody([
-                                    dcc.Loading(
-                                        dcc.Graph(id="numeric-correlation-plot", style={"height": "500px"}),
-                                        type="circle",
-                                        color="var(--primary)"
-                                    ),
-                                ]),
-                            ], style=custom_css["card"]),
-                        ], width=12),
-                    ], style={"marginBottom": "20px"}),
-                    
-                    # Label Encoding Correlation
-                    dbc.Row([
-                        dbc.Col([
-                            dbc.Card([
-                                dbc.CardHeader([
-                                    html.I(className="fas fa-tags mr-2", style={"color": "var(--primary)"}),
-                                    "Label-Encoded Correlation",
-                                    html.Span(
-                                        "Converts categories to numeric labels",
-                                        style={
-                                            "fontSize": "12px",
-                                            "color": "var(--text-secondary)",
-                                            "marginLeft": "10px",
-                                            "fontWeight": "normal"
-                                        }
-                                    ),
-                                ], style=custom_css["card_header"]),
-                                dbc.CardBody([
-                                    dcc.Loading(
-                                        dcc.Graph(id="label-correlation-plot", style={"height": "500px"}),
-                                        type="circle",
-                                        color="var(--primary)"
-                                    ),
-                                ]),
-                            ], style=custom_css["card"]),
-                        ], width=12),
-                    ], style={"marginBottom": "20px"}),
-                    
-                    # One-Hot Encoding Correlation
-                    dbc.Row([
-                        dbc.Col([
-                            dbc.Card([
-                                dbc.CardHeader([
-                                    html.I(className="fas fa-th mr-2", style={"color": "var(--primary)"}),
-                                    "One-Hot Encoded Correlation",
-                                    html.Span(
-                                        "Creates binary columns for each category",
-                                        style={
-                                            "fontSize": "12px",
-                                            "color": "var(--text-secondary)",
-                                            "marginLeft": "10px",
-                                            "fontWeight": "normal"
-                                        }
-                                    ),
-                                ], style=custom_css["card_header"]),
-                                dbc.CardBody([
-                                    dcc.Loading(
-                                        dcc.Graph(id="onehot-correlation-plot", style={"height": "500px"}),
-                                        type="circle",
-                                        color="var(--primary)"
-                                    ),
-                                ]),
-                            ], style=custom_css["card"]),
-                        ], width=12),
-                    ]),
-                ]),
-            ], style=custom_css["card"]),
-        ]),
-        
+
         # Tests tab
         html.Div(id="tests-content", style={"display": "none", "opacity": "0", "transition": "opacity 0.3s ease-in-out"}, children=[
             dbc.Card([
@@ -2154,8 +2356,8 @@ app.layout = html.Div(style=custom_css["background"], children=[
                     dbc.Row([
                         dbc.Col(html.Div([
                             dcc.Dropdown(
-                                id="test-type-dropdown", 
-                                placeholder="Select Test Type", 
+                                id="test-type-dropdown",
+                                placeholder="Select Test Type",
                                 options=[
                                     {"label": html.Span("Chi-squared Test", style={"color": "#FFFFFF"}), "value": "chi2"},
                                     {"label": html.Span("Pearson Correlation", style={"color": "#FFFFFF"}), "value": "pearson"},
@@ -2167,7 +2369,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
                         ]), width=6),
                         dbc.Col(html.Div([
                             dcc.Dropdown(
-                                id="test-x-dropdown", 
+                                id="test-x-dropdown",
                                 placeholder="Select variable (filtered by test)",
                                 style=custom_css["dropdown"],
                                 className='dropdown-dark'
@@ -2177,7 +2379,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
                     dbc.Row([
                         dbc.Col(html.Div([
                             dcc.Dropdown(
-                                id="test-y-dropdown", 
+                                id="test-y-dropdown",
                                 placeholder="Select second variable (filtered by test)",
                                 style=custom_css["dropdown"],
                                 className='dropdown-dark'
@@ -2186,8 +2388,8 @@ app.layout = html.Div(style=custom_css["background"], children=[
                     ], style={"marginBottom": "20px"}),
                     dbc.Row([
                         dbc.Col(dbc.Button(
-                            [html.I(className="fas fa-calculator mr-2"), "Perform Test"], 
-                            id="perform-test", 
+                            [html.I(className="fas fa-calculator mr-2"), "Perform Test"],
+                            id="perform-test",
                             style=custom_css["button"]
                         ))
                     ]),
@@ -2196,9 +2398,9 @@ app.layout = html.Div(style=custom_css["background"], children=[
                     ]),
                     dbc.Row([
                         dbc.Col(html.Div(
-                            id="test-result", 
+                            id="test-result",
                             style={
-                                "textAlign": "center", 
+                                "textAlign": "center",
                                 "margin": "15px 0",
                                 "color": "#e6e6e6"
                             }
@@ -2226,8 +2428,8 @@ app.layout = html.Div(style=custom_css["background"], children=[
                 ]),
             ], style=custom_css["card"]),
         ]),
-        
-        # Regression tab 
+
+        # Regression tab
         html.Div(id="regression-content", style={"display": "none", "opacity": "0", "transition": "opacity 0.3s ease-in-out"}, children=[
             dbc.Card([
                 dbc.CardHeader("Linear Regression Analysis", style=custom_css["card_header"]),
@@ -2274,7 +2476,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
                                     ),
                                 ]),
                             ], style=custom_css["card"]),
-                            
+
                             # Regression Results Card
                             dbc.Card([
                                 dbc.CardHeader("Regression Results", style=custom_css["card_header"]),
@@ -2320,7 +2522,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
                                 ]),
                             ], style={**custom_css["card"], "marginTop": "20px"}),
                         ], width=4),
-                        
+
                         # Regression Plot
                         dbc.Col([
                             dbc.Card([
@@ -2345,7 +2547,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
                 ]),
             ], style=custom_css["card"]),
         ]),
-        
+
         # FAQ tab
         html.Div(id="faq-content", style={"display": "none", "opacity": "0", "transition": "opacity 0.3s ease-in-out"}, children=[
             dbc.Card([
@@ -2355,10 +2557,10 @@ app.layout = html.Div(style=custom_css["background"], children=[
                 dbc.CardBody([
                     html.Div(style={"display": "flex", "alignItems": "center", "marginBottom": "25px"}, children=[
                         html.I(className="fas fa-question-circle", style={"fontSize": "24px", "color": "var(--primary)", "marginRight": "15px"}),
-                        html.P("Find answers to common questions and learn how to make the most of this data analysis dashboard. Browse through the categories below to quickly find the information you need.", 
+                        html.P("Find answers to common questions and learn how to make the most of this data analysis dashboard. Browse through the categories below to quickly find the information you need.",
                           style={"color": "var(--text-secondary)", "fontSize": "16px", "margin": "0"})
                     ]),
-                    
+
                     # FAQ categories
                     dbc.Tabs([
                         # Getting Started Tab
@@ -2414,7 +2616,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
                                 ], start_collapsed=True, style={"borderRadius": "8px", "boxShadow": "0 2px 5px rgba(0, 0, 0, 0.05)"}),
                             ]),
                         ]),
-                        
+
                         # Data Cleaning Tab
                         dbc.Tab(label="Data Cleaning", tab_id="data-cleaning", label_style={"fontWeight": "bold", "padding": "12px 15px"}, active_label_style={"color": "var(--primary)", "borderBottom": "2px solid var(--primary)"}, children=[
                             html.Div(style={"marginTop": "20px", "padding": "5px"}, children=[
@@ -2446,7 +2648,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
                                 ], start_collapsed=True, style={"borderRadius": "8px", "boxShadow": "0 2px 5px rgba(0, 0, 0, 0.05)"}),
                             ]),
                         ]),
-                        
+
                         # Visualization Tab
                         dbc.Tab(label="Visualization", tab_id="visualization", label_style={"fontWeight": "bold", "padding": "12px 15px"}, active_label_style={"color": "var(--primary)", "borderBottom": "2px solid var(--primary)"}, children=[
                             html.Div(style={"marginTop": "20px", "padding": "5px"}, children=[
@@ -2470,7 +2672,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
                                 ], start_collapsed=True, style={"borderRadius": "8px", "boxShadow": "0 2px 5px rgba(0, 0, 0, 0.05)"}),
                             ]),
                         ]),
-                        
+
                         # Statistical Analysis Tab
                         dbc.Tab(label="Statistical Analysis", tab_id="statistical-analysis", label_style={"fontWeight": "bold", "padding": "12px 15px"}, active_label_style={"color": "var(--primary)", "borderBottom": "2px solid var(--primary)"}, children=[
                             html.Div(style={"marginTop": "20px", "padding": "5px"}, children=[
@@ -2502,7 +2704,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
                                 ], start_collapsed=True, style={"borderRadius": "8px", "boxShadow": "0 2px 5px rgba(0, 0, 0, 0.05)"}),
                             ]),
                         ]),
-                        
+
                         # Export & Reporting Tab
                         dbc.Tab(label="Export & Reporting", tab_id="export-reporting", label_style={"fontWeight": "bold", "padding": "12px 15px"}, active_label_style={"color": "var(--primary)", "borderBottom": "2px solid var(--primary)"}, children=[
                             html.Div(style={"marginTop": "20px", "padding": "5px"}, children=[
@@ -2526,7 +2728,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
                                 ], start_collapsed=True, style={"borderRadius": "8px", "boxShadow": "0 2px 5px rgba(0, 0, 0, 0.05)"}),
                             ]),
                         ]),
-                        
+
                         # Troubleshooting Tab
                         dbc.Tab(label="Troubleshooting", tab_id="troubleshooting", label_style={"fontWeight": "bold", "padding": "12px 15px"}, active_label_style={"color": "var(--primary)", "borderBottom": "2px solid var(--primary)"}, children=[
                             html.Div(style={"marginTop": "20px"}, children=[
@@ -2559,7 +2761,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
                             ]),
                         ]),
                     ], id="faq-tabs", style={"backgroundColor": "var(--card-bg)", "borderRadius": "8px", "padding": "5px"}),
-                    
+
                     # Additional help resources
                     html.Div(style={"marginTop": "40px", "padding": "20px", "backgroundColor": "var(--primary-light)", "borderRadius": "12px", "boxShadow": "0 4px 8px rgba(0, 0, 0, 0.1)"}, children=[
                         html.H5("Need More Help?", style={"color": "var(--primary)", "fontWeight": "bold", "marginBottom": "15px"}),
@@ -2571,7 +2773,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
                                 html.Div([
                                     html.I(className="fas fa-envelope", style={"marginRight": "10px", "color": "var(--primary)"}),
                                     html.Span("Contact Support: ", style={"fontWeight": "600"}),
-                                    html.A("ilyes.frigui.ps@gmail.com", 
+                                    html.A("ilyes.frigui.ps@gmail.com",
                                           href="mailto:ilyes.frigui.ps@gmail.com",
                                           style={"color": "var(--primary)", "textDecoration": "none", "borderBottom": "1px dotted var(--primary)"}),
                                 ], style={"fontSize": "16px", "display": "flex", "alignItems": "center"}),
@@ -2581,25 +2783,25 @@ app.layout = html.Div(style=custom_css["background"], children=[
                 ]),
             ], style=custom_css["card"]),
         ]),
-        
+
         # Report tab
         html.Div(id="report-content", style={"display": "none", "opacity": "0", "transition": "opacity 0.3s ease-in-out"}, children=[
             dbc.Card([
                 dbc.CardHeader("Automated EDA Report", style=custom_css["card_header"]),
                 dbc.CardBody([
                     html.Div([
-                        html.P("Generate a comprehensive Exploratory Data Analysis report for your dataset.", 
+                        html.P("Generate a comprehensive Exploratory Data Analysis report for your dataset.",
                                style={"color": "var(--text-secondary)", "fontSize": "16px", "marginBottom": "20px"}),
-                        
+
                         # Button to generate the report
                         dbc.Button([
-                            html.I(className="fas fa-file-alt mr-2"), 
+                            html.I(className="fas fa-file-alt mr-2"),
                             "Generate EDA Report"
-                        ], 
-                        id="generate-report-button", 
+                        ],
+                        id="generate-report-button",
                         style=custom_css["button"],
                         className="mb-4"),
-                        
+
                         # Loading spinner during report generation
                         dbc.Spinner(
                             html.Div(id="eda-report-container", style={"minHeight": "200px"}),
@@ -2611,7 +2813,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
                 ]),
             ], style=custom_css["card"]),
         ]),
-        
+
         # Prediction tab
         html.Div(id="prediction-content", style={"display": "none", "opacity": "0", "transition": "opacity 0.3s ease-in-out"}, children=[
             dbc.Card([
@@ -2623,9 +2825,9 @@ app.layout = html.Div(style=custom_css["background"], children=[
                             dbc.Card([
                                 dbc.CardHeader("Train Model", style=custom_css["card_header"]),
                                 dbc.CardBody([
-                                    html.P("Train a Random Forest classifier on your dataset.", 
+                                    html.P("Train a Random Forest classifier on your dataset.",
                                            style={"color": "var(--text-secondary)", "marginBottom": "15px"}),
-                                           
+
                                     # Target column selection
                                     html.Div([
                                         html.Label("Select Target Variable:", style={
@@ -2641,7 +2843,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
                                             className='dropdown-dark custom-dropdown'
                                         )
                                     ]),
-                                    
+
                                     # Feature selection
                                     html.Div([
                                         html.Label("Select Features:", style={
@@ -2658,7 +2860,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
                                             className='dropdown-dark custom-dropdown'
                                         )
                                     ]),
-                                    
+
                                     # Model parameters
                                     html.Div([
                                         html.Label("Model Parameters:", style={
@@ -2718,7 +2920,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
                                             ], width=6)
                                         ])
                                     ]),
-                                    
+
                                     # Train button
                                     dbc.Button(
                                         [html.I(className="fas fa-cogs mr-2"), "Train Model"],
@@ -2727,7 +2929,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
                                         style=custom_css["button"],
                                         className="mb-3"
                                     ),
-                                    
+
                                     # Training status and metrics
                                     dbc.Spinner(
                                         html.Div(id="training-status", style={"minHeight": "50px"}),
@@ -2738,15 +2940,15 @@ app.layout = html.Div(style=custom_css["background"], children=[
                                 ])
                             ], style=custom_css["card"])
                         ], width=6),
-                        
+
                         dbc.Col([
                             # Right panel for making predictions
                             dbc.Card([
                                 dbc.CardHeader("Make Predictions", style=custom_css["card_header"]),
                                 dbc.CardBody([
-                                    html.P("Make predictions using the trained Random Forest model.", 
+                                    html.P("Make predictions using the trained Random Forest model.",
                                            style={"color": "var(--text-secondary)", "marginBottom": "15px"}),
-                                    
+
                                     # Two tabs: Manual Input and File Upload
                                     dbc.Tabs([
                                         dbc.Tab(label="Manual Input", tab_id="manual-input", children=[
@@ -2772,8 +2974,8 @@ app.layout = html.Div(style=custom_css["background"], children=[
                                                 className="upload-area mt-3 mb-3",
                                             ),
                                             html.Div(id="prediction-upload-status", style={
-                                                "color": "#a3a3a3", 
-                                                "textAlign": "center", 
+                                                "color": "#a3a3a3",
+                                                "textAlign": "center",
                                                 "marginBottom": "15px"
                                             }),
                                             dbc.Button(
@@ -2788,7 +2990,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
                                     ], id="prediction-tabs")
                                 ])
                             ], style=custom_css["card"]),
-                            
+
                             # Results card
                             dbc.Card([
                                 dbc.CardHeader("Prediction Results", style=custom_css["card_header"]),
@@ -2801,8 +3003,193 @@ app.layout = html.Div(style=custom_css["background"], children=[
                 ]),
             ], style=custom_css["card"]),
         ]),
+
+        # Encoding tab
+        html.Div(id="encoding-content", style={"display": "none", "opacity": "0", "transition": "opacity 0.3s ease-in-out"}, children=[
+            dbc.Card([
+                dbc.CardHeader(
+                    html.H4("Categorical Variable Encoding",
+                           className="text-center",
+                           style={
+                               "color": "#1abc9c",
+                               "fontWeight": "bold",
+                               "textAlign": "center",
+                               "width": "100%",
+                               "margin": "0 auto",
+                               "padding": "8px 0",
+                               "letterSpacing": "0.5px"
+                           }
+                    ),
+                    style={
+                        **custom_css["card_header"],
+                        "textAlign": "center",
+                        "display": "flex",
+                        "justifyContent": "center",
+                        "padding": "16px",
+                        "borderBottom": "2px solid rgba(26, 188, 156, 0.3)"
+                    }
+                ),
+                dbc.CardBody([
+                    # Main content container
+                    dbc.Row([
+                        # Left column - Controls
+                        dbc.Col([
+                            dbc.Card([
+                                dbc.CardHeader(
+                                    html.Div([
+                                        html.I(className="fas fa-cogs mr-2", style={"color": "var(--primary)"}),
+                                        "Encoding Options"
+                                    ], style={"fontSize": "16px", "fontWeight": "bold"}),
+                                    style=custom_css["card_header"]
+                                ),
+                                dbc.CardBody([
+                                    # Column selection
+                                    html.Div([
+                                        html.Label("Select Column to Encode:",
+                                                  style={"color": "#e6e6e6", "fontWeight": "bold", "marginBottom": "8px", "display": "block"}),
+                                        dcc.Dropdown(
+                                            id="encoding_column_dropdown",
+                                            placeholder="Select a categorical column",
+                                            style={**custom_css["dropdown"], "marginBottom": "16px"},
+                                            className='dropdown-dark custom-dropdown'
+                                        ),
+                                    ], className="mb-4"),
+
+                                    # Encoding method selection
+                                    html.Div([
+                                        html.Label("Select Encoding Method:",
+                                                  style={"color": "#e6e6e6", "fontWeight": "bold", "marginBottom": "8px", "display": "block"}),
+                                        dcc.Dropdown(
+                                            id="encoding_method_dropdown",
+                                            options=[
+                                                {"label": "Label Encoding", "value": "label"},
+                                                {"label": "One-Hot Encoding", "value": "onehot"},
+                                                {"label": "Ordinal Encoding", "value": "ordinal"},
+                                            ],
+                                            placeholder="Select encoding method",
+                                            style={**custom_css["dropdown"], "marginBottom": "16px"},
+                                            className='dropdown-dark custom-dropdown'
+                                        ),
+                                    ], className="mb-4"),
+
+                                    # Ordinal encoding container (will be populated dynamically)
+                                    html.Div(id="encoding_ordinal_container", className="mb-4"),
+
+                                    # Show only encoded columns toggle
+                                    html.Div([
+                                        dbc.Label("Show only encoded columns:",
+                                                style={"color": "#e6e6e6", "fontWeight": "bold", "marginBottom": "8px", "display": "block"}),
+                                        dbc.Checklist(
+                                            options=[{"label": "", "value": 1}],
+                                            value=[],
+                                            id="encoding_show_encoded_toggle",
+                                            switch=True,
+                                            style={"marginBottom": "16px"}
+                                        ),
+                                    ], className="mb-4"),
+
+                                    # Apply encoding button
+                                    dbc.Button(
+                                        "Apply Encoding",
+                                        id="encoding_apply_button",
+                                        color="primary",
+                                        className="mb-4",
+                                        style={
+                                            "width": "100%",
+                                            "fontWeight": "bold",
+                                            "padding": "12px",
+                                            "boxShadow": "0 4px 6px rgba(0, 0, 0, 0.1)",
+                                        }
+                                    ),
+
+                                    # Status message area
+                                    html.Div(id="encoding_message", className="mb-4", style={
+                                        "minHeight": "60px",
+                                        "padding": "8px",
+                                        "backgroundColor": "rgba(26, 188, 156, 0.05)",
+                                        "borderRadius": "6px",
+                                        "border": "1px solid rgba(26, 188, 156, 0.1)"
+                                    }),
+
+                                    # Download buttons
+                                    html.Div([
+                                        html.Label("Download Encoded Data:",
+                                                  style={"color": "#e6e6e6", "fontWeight": "bold", "marginBottom": "16px", "display": "block"}),
+                                        dbc.Row([
+                                            dbc.Col([
+                                                dbc.Button([
+                                                    html.I(className="fas fa-file-csv mr-2"),
+                                                    "CSV"
+                                                ], id="encoding_download_csv_button", color="primary", style={"width": "100%"}),
+                                            ], width=4),
+                                            dbc.Col([
+                                                dbc.Button([
+                                                    html.I(className="fas fa-file-code mr-2"),
+                                                    "JSON"
+                                                ], id="encoding_download_json_button", color="info", style={"width": "100%"}),
+                                            ], width=4),
+                                            dbc.Col([
+                                                dbc.Button([
+                                                    html.I(className="fas fa-file-excel mr-2"),
+                                                    "Excel"
+                                                ], id="encoding_download_excel_button", color="success", style={"width": "100%"}),
+                                            ], width=4),
+                                        ]),
+                                    ], className="mt-4"),
+                                ])
+                            ], style=custom_css["card"]),
+                        ], width=4),
+
+                        # Right column - Preview
+                        dbc.Col([
+                            dbc.Card([
+                                dbc.CardHeader(
+                                    html.Div([
+                                        html.I(className="fas fa-table mr-2", style={"color": "var(--primary)"}),
+                                        "Data Preview"
+                                    ], style={"fontSize": "16px", "fontWeight": "bold"}),
+                                    style=custom_css["card_header"]
+                                ),
+                                dbc.CardBody([
+                                    # Preview table
+                                    dash_table.DataTable(
+                                        id="encoding_preview_table",
+                                        style_table={
+                                            "overflowX": "auto",
+                                            "overflowY": "auto",
+                                            "height": "500px",
+                                            **custom_css["table"]
+                                        },
+                                        style_header=custom_css["table_header"],
+                                        style_cell={
+                                            "backgroundColor": "#16213e",
+                                            "color": "#e6e6e6",
+                                            "padding": "10px",
+                                            "border": "1px solid #2a3a5e",
+                                            "textOverflow": "ellipsis",
+                                            "maxWidth": "400px",
+                                        },
+                                        style_data_conditional=[
+                                            {"if": {"row_index": "odd"}, "backgroundColor": "#1a1a2e"}
+                                        ],
+                                        page_size=10,
+                                        fixed_rows={'headers': True},
+                                    )
+                                ])
+                            ], style=custom_css["card"]),
+                        ], width=8),
+                    ]),
+
+                    # Hidden elements
+                    dcc.Store(id="encoding_data_store"),
+                    dcc.Download(id="encoding_download_csv"),
+                    dcc.Download(id="encoding_download_json"),
+                    dcc.Download(id="encoding_download_excel"),
+                ], style={"padding": "24px"}),
+            ], style=custom_css["card"]),
+        ]),
     ]),
-    
+
     # Footer
     html.Footer(style={
         "backgroundColor": "var(--dark-bg)",
@@ -2819,11 +3206,11 @@ app.layout = html.Div(style=custom_css["background"], children=[
             "opacity": "0.8"
         })
     ]),
-    
+
     # Store for duplicates and outliers data
     dcc.Store(id='duplicates-store'),
     dcc.Store(id='outliers-store'),
-    
+
     # Stores for prediction functionality
     dcc.Store(id='trained-model-store'),  # Stores trained model info
     dcc.Store(id='feature-info-store'),   # Stores feature information for preprocessing
@@ -2839,7 +3226,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
         Output("summary-content", "style"),
         Output("imputation-content", "style"),
         Output("statistics-content", "style"),
-        Output("correlation-content", "style"),
+        Output("encoding-content", "style"),
         Output("tests-content", "style"),
         Output("regression-content", "style"),
         Output("report-content", "style"),
@@ -2850,7 +3237,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
         Output("summary-button", "active"),
         Output("imputation-button", "active"),
         Output("statistics-button", "active"),
-        Output("correlation-button", "active"),
+        Output("encoding-button", "active"),
         Output("tests-button", "active"),
         Output("regression-button", "active"),
         Output("report-button", "active"),
@@ -2861,7 +3248,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
         Output("summary-button", "className"),
         Output("imputation-button", "className"),
         Output("statistics-button", "className"),
-        Output("correlation-button", "className"),
+        Output("encoding-button", "className"),
         Output("tests-button", "className"),
         Output("regression-button", "className"),
         Output("report-button", "className"),
@@ -2874,7 +3261,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
         Input("summary-button", "n_clicks"),
         Input("imputation-button", "n_clicks"),
         Input("statistics-button", "n_clicks"),
-        Input("correlation-button", "n_clicks"),
+        Input("encoding-button", "n_clicks"),
         Input("tests-button", "n_clicks"),
         Input("regression-button", "n_clicks"),
         Input("report-button", "n_clicks"),
@@ -2882,7 +3269,7 @@ app.layout = html.Div(style=custom_css["background"], children=[
         Input("faq-button", "n_clicks"),
     ],
 )
-def update_content(welcome_clicks, import_clicks, summary_clicks, imputation_clicks, statistics_clicks, correlation_clicks, tests_clicks, regression_clicks, report_clicks, prediction_clicks, faq_clicks):
+def update_content(welcome_clicks, import_clicks, summary_clicks, imputation_clicks, statistics_clicks, encoding_clicks, tests_clicks, regression_clicks, report_clicks, prediction_clicks, faq_clicks):
     ctx = dash.callback_context
     if not ctx.triggered:
         return [
@@ -2903,7 +3290,7 @@ def update_content(welcome_clicks, import_clicks, summary_clicks, imputation_cli
         "summary-button": 2,
         "imputation-button": 3,
         "statistics-button": 4,
-        "correlation-button": 5,
+        "encoding-button": 5,
         "tests-button": 6,
         "regression-button": 7,
         "report-button": 8,
@@ -2957,32 +3344,32 @@ def parse_data(contents, has_header, filename):
     columns = [{"name": col, "id": col} for col in df.columns]
     data = df.to_dict("records")
     dropdown_options = [{"label": html.Span(col, style={"color": "#FFFFFF"}), "value": col} for col in df.columns]
-    
+
     # For test dropdowns, we provide all columns as options initially
     # The test-specific callback will filter them based on the test type
     test_dropdown_options = dropdown_options.copy()
-    
+
     # Other dropdowns remain the same
     categorical_columns = [col for col in df.columns if not pd.api.types.is_numeric_dtype(df[col])]
     numeric_columns = [col for col in df.columns if pd.api.types.is_numeric_dtype(df[col])]
-    
+
     # Find columns with missing values for imputation dropdown
     columns_with_missing = [col for col in df.columns if df[col].isna().any()]
     imputation_dropdown_options = [{"label": html.Span(col, style={"color": "#FFFFFF"}), "value": col} for col in columns_with_missing]
-    
+
     # Only numeric columns for outlier detection
     outlier_dropdown_options = [{"label": html.Span(col, style={"color": "#FFFFFF"}), "value": col} for col in numeric_columns]
-    
+
     # Identify potential date columns for time series
     date_columns = [col for col in df.columns if is_possible_datetime(df[col])]
     date_dropdown_options = [{"label": html.Span(col, style={"color": "#FFFFFF"}), "value": col} for col in date_columns]
-    
+
     # Options for scatter matrix
     scatter_matrix_vars = [{"label": html.Span(col, style={"color": "#FFFFFF"}), "value": col} for col in numeric_columns]
     scatter_matrix_color = [{"label": html.Span(col, style={"color": "#FFFFFF"}), "value": col} for col in df.columns]
-    
-    return (data, columns, f"Successfully uploaded {filename}", dropdown_options, dropdown_options, 
-            test_dropdown_options, test_dropdown_options, imputation_dropdown_options, outlier_dropdown_options, 
+
+    return (data, columns, f"Successfully uploaded {filename}", dropdown_options, dropdown_options,
+            test_dropdown_options, test_dropdown_options, imputation_dropdown_options, outlier_dropdown_options,
             date_dropdown_options, dropdown_options, scatter_matrix_vars, scatter_matrix_color)
 
 # Show/hide controls based on plot type selection
@@ -3032,33 +3419,33 @@ def generate_summary(data, n_clicks):
         # Missing Values Summary
         missing_values = df.isna().sum().sum()
         missing_values_pct = (missing_values / (num_rows * num_cols)) * 100 if num_rows * num_cols > 0 else 0
-        
+
         # Get missing values by column for detailed visualization
         missing_by_column = df.isna().sum().reset_index()
         missing_by_column.columns = ['Column', 'Missing Count']
         missing_by_column['Missing Percentage'] = (missing_by_column['Missing Count'] / num_rows * 100).round(2)
         missing_by_column = missing_by_column.sort_values('Missing Count', ascending=False)
-        
+
         # Only keep columns with missing values
         missing_by_column = missing_by_column[missing_by_column['Missing Count'] > 0]
-        
+
         # Create enhanced missing values summary with animations and more detailed information
         missing_values_summary = html.Div([
             # Header with icon and main count
             html.Div([
-                html.I(className="fas fa-exclamation-triangle fa-2x", 
+                html.I(className="fas fa-exclamation-triangle fa-2x",
                        style={"color": "#EA4335", "marginRight": "15px"}),
                 html.Div([
                     html.H4("Missing Values", style={"color": "#ffffff", "margin": "0"}),
                     html.Div([
-                        html.Span(f"{missing_values}", 
+                        html.Span(f"{missing_values}",
                                   style={"fontSize": "24px", "fontWeight": "bold", "color": "#EA4335"}),
-                        html.Span(f" ({missing_values_pct:.2f}%)", 
+                        html.Span(f" ({missing_values_pct:.2f}%)",
                                   style={"fontSize": "16px", "color": "#aaaaaa"})
                     ], style={"display": "flex", "alignItems": "baseline"})
                 ])
             ], style={"display": "flex", "alignItems": "center", "marginBottom": "15px"}),
-            
+
             # Interactive gauge chart with animation
             dcc.Graph(
                 figure=go.Figure(go.Indicator(
@@ -3091,13 +3478,13 @@ def generate_summary(data, n_clicks):
                 config={"displayModeBar": False},
                 style={"height": "200px"}
             ),
-            
+
             # Detailed missing values by column (only show if there are missing values)
             html.Div([
-                html.H5("Missing Values by Column", 
-                       style={"color": "#ffffff", "margin": "20px 0 10px 0", 
+                html.H5("Missing Values by Column",
+                       style={"color": "#ffffff", "margin": "20px 0 10px 0",
                               "textAlign": "center", "fontWeight": "bold"}),
-                
+
                 # Animated bar chart showing missing values by column
                 dcc.Graph(
                     figure=go.Figure(
@@ -3128,27 +3515,27 @@ def generate_summary(data, n_clicks):
                     config={"displayModeBar": False},
                     style={"height": "300px"}
                 ),
-                
+
                 # Recommendations card based on missing data
                 html.Div([
-                    html.H6("Recommendations", 
+                    html.H6("Recommendations",
                            style={"color": "#1abc9c", "fontWeight": "bold", "marginBottom": "10px"}),
                     html.Ul([
                         html.Li(
-                            "Consider imputation techniques for columns with few missing values", 
+                            "Consider imputation techniques for columns with few missing values",
                             style={"color": "#e6e6e6", "marginBottom": "5px"}
                         ),
                         html.Li(
-                            "For columns with >50% missing data, consider removing them", 
+                            "For columns with >50% missing data, consider removing them",
                             style={"color": "#e6e6e6", "marginBottom": "5px"}
                         ),
                         html.Li(
-                            "Examine patterns in missing data for potential biases", 
+                            "Examine patterns in missing data for potential biases",
                             style={"color": "#e6e6e6"}
                         ),
                     ], style={"paddingLeft": "20px"})
                 ], style={
-                    "backgroundColor": "rgba(26, 188, 156, 0.1)", 
+                    "backgroundColor": "rgba(26, 188, 156, 0.1)",
                     "border": "1px solid rgba(26, 188, 156, 0.3)",
                     "borderRadius": "5px",
                     "padding": "15px",
@@ -3159,27 +3546,27 @@ def generate_summary(data, n_clicks):
 
         # NEW APPROACH: Create summary statistics for all columns regardless of type
         # Start with an empty DataFrame with preset statistics
-        stats_rows = ['count', 'mean', 'std', 'min', '25%', '50%', '75%', 'max', 'null_count', 'null_pct', 
+        stats_rows = ['count', 'mean', 'std', 'min', '25%', '50%', '75%', 'max', 'null_count', 'null_pct',
                       'unique', 'top', 'freq', 'dtype']
         summary = pd.DataFrame(index=stats_rows)
-        
+
         # Process each column individually
         for col in df.columns:
             col_data = df[col]
             col_stats = {}
-            
+
             # Basic count statistics
             col_stats['count'] = len(col_data)
             col_stats['null_count'] = col_data.isna().sum()
             col_stats['null_pct'] = f"{(col_data.isna().sum() / len(col_data) * 100):.2f}%"
             col_stats['dtype'] = str(col_data.dtype)
-            
+
             # Try to get unique values (works for most data types)
             try:
                 col_stats['unique'] = col_data.nunique()
             except:
                 col_stats['unique'] = 'N/A'
-                
+
             # Numeric statistics when applicable
             try:
                 # Check if data can be treated as numeric
@@ -3197,7 +3584,7 @@ def generate_summary(data, n_clicks):
                 for stat in ['mean', 'std', 'min', '25%', '50%', '75%', 'max']:
                     if stat not in col_stats:
                         col_stats[stat] = 'N/A'
-            
+
             # Most common value statistics (categorical/object data)
             try:
                 value_counts = col_data.value_counts(dropna=True)
@@ -3212,10 +3599,10 @@ def generate_summary(data, n_clicks):
             except:
                 col_stats['top'] = 'N/A'
                 col_stats['freq'] = 'N/A'
-            
+
             # Add this column's stats to the summary DataFrame
             summary[col] = pd.Series(col_stats)
-        
+
         # Format numeric values
         for col in summary.columns:
             for stat in stats_rows:
@@ -3226,26 +3613,26 @@ def generate_summary(data, n_clicks):
                         summary.loc[stat, col] = int(val)
                     elif stat not in ['null_pct', 'dtype', 'top'] and not isinstance(val, str):
                         summary.loc[stat, col] = f"{val:.3f}" if abs(val) < 1000 else f"{val:.2e}"
-        
+
         # Reset index to create the 'index' column for the table
         summary = summary.reset_index().rename(columns={'index': 'Statistic'})
-        
+
         # Create column specifications for the table
         columns = [
             {"name": "Statistic", "id": "Statistic"} if col == "Statistic" else
             {"name": str(col), "id": str(col)}
             for col in summary.columns
         ]
-        
+
         # Create table data
         summary_data = summary.to_dict("records")
-        
+
         # If the summary is still empty after all efforts, create a placeholder
         if not summary_data:
             raise ValueError("Could not generate statistics")
-                
+
         return summary_data, columns, num_rows, num_cols, missing_values_summary, "", False
-    
+
     except Exception as e:
         print(f"Error in generate_summary: {str(e)}")
         return [], [], "", "", "", f"Error generating summary: {str(e)}", True
@@ -3286,8 +3673,8 @@ def generate_summary(data, n_clicks):
         State("outlier-handling-method", "value")
     ]
 )
-def handle_data_cleaning(data, selected_columns, method, rows, find_clicks, remove_clicks, 
-                        detect_clicks, handle_clicks, apply_imputation_clicks, duplicates_data, outliers_data, 
+def handle_data_cleaning(data, selected_columns, method, rows, find_clicks, remove_clicks,
+                        detect_clicks, handle_clicks, apply_imputation_clicks, duplicates_data, outliers_data,
                         outlier_cols, outlier_method, outlier_threshold, outlier_handling):
     if not data:
         return [], [], 10, "No data uploaded yet", True, "No data uploaded yet", None, True, "No data uploaded yet", None, False, False
@@ -3301,11 +3688,11 @@ def handle_data_cleaning(data, selected_columns, method, rows, find_clicks, remo
     duplicates_message = []
     remove_button_disabled = True
     duplicates_store = duplicates_data
-    
+
     outliers_message = []
     handle_button_disabled = True
     outliers_store = outliers_data
-    
+
     # Initialize toast states
     success_toast_open = False
     warning_toast_open = False
@@ -3313,9 +3700,9 @@ def handle_data_cleaning(data, selected_columns, method, rows, find_clicks, remo
     # Create a message about missing values
     missing_cols = df.columns[df.isna().any()].tolist()
     missing_counts = df.isna().sum()
-    
+
     df_imputed = df.copy()
-    
+
     if len(missing_cols) == 0:
         missing_message = html.Div([
             html.I(className="fas fa-check-circle mr-2", style={"color": "#51cf66", "marginRight": "8px"}),
@@ -3331,7 +3718,7 @@ def handle_data_cleaning(data, selected_columns, method, rows, find_clicks, remo
                 ]) for col in missing_cols
             ], style={"marginLeft": "20px", "listStyleType": "disc"})
         ]
-    
+
     # Handle duplicate detection
     if ctx.triggered and ctx.triggered[0]['prop_id'] == 'find-duplicates-button.n_clicks':
         duplicates = df[df.duplicated(keep=False)]
@@ -3366,7 +3753,7 @@ def handle_data_cleaning(data, selected_columns, method, rows, find_clicks, remo
             ], style={"color": "#51cf66"})
             remove_button_disabled = True
             duplicates_store = None
-            
+
     # Handle duplicate removal
     elif ctx.triggered and ctx.triggered[0]['prop_id'] == 'remove-duplicates-button.n_clicks' and duplicates_data:
         df = df.drop_duplicates()
@@ -3377,7 +3764,7 @@ def handle_data_cleaning(data, selected_columns, method, rows, find_clicks, remo
         ], style={"color": "#51cf66"})
         remove_button_disabled = True
         duplicates_store = None
-    
+
     # Handle outlier detection
     elif ctx.triggered and ctx.triggered[0]['prop_id'] == 'detect-outliers-button.n_clicks':
         if not outlier_cols:
@@ -3388,16 +3775,16 @@ def handle_data_cleaning(data, selected_columns, method, rows, find_clicks, remo
         else:
             outliers_dict = {}
             outlier_indices = set()
-            
+
             for col in outlier_cols:
                 if not pd.api.types.is_numeric_dtype(df[col]):
                     continue
-                    
+
                 col_data = df[col].copy().dropna()
-                
+
                 if len(col_data) <= 1:  # Skip if not enough data after dropping NA
                     continue
-                
+
                 if outlier_method == "iqr":
                     # IQR method
                     q1 = col_data.quantile(0.25)
@@ -3408,15 +3795,15 @@ def handle_data_cleaning(data, selected_columns, method, rows, find_clicks, remo
                     upper_bound = q3 + threshold * iqr
                     outliers = df[(df[col] < lower_bound) | (df[col] > upper_bound)][col]
                     outlier_rows = outliers.index.tolist()
-                    
+
                 elif outlier_method == "zscore":
                     # Z-score method
                     threshold = outlier_threshold if outlier_threshold else 3
-                    
+
                     # Calculate z-scores more safely
                     mean = col_data.mean()
                     std = col_data.std()
-                    
+
                     # Handle case where std is 0 to avoid division by zero
                     if std == 0:
                         outlier_rows = []
@@ -3424,7 +3811,7 @@ def handle_data_cleaning(data, selected_columns, method, rows, find_clicks, remo
                         # Calculate z-scores manually to avoid errors
                         z_scores = abs((df[col] - mean) / std)
                         outlier_rows = df[z_scores > threshold].index.tolist()
-                
+
                 if outlier_rows:
                     outliers_dict[col] = {
                         'outliers': df.loc[outlier_rows, col].to_dict(),
@@ -3432,7 +3819,7 @@ def handle_data_cleaning(data, selected_columns, method, rows, find_clicks, remo
                         'indices': outlier_rows
                     }
                     outlier_indices.update(outlier_rows)
-            
+
             if outliers_dict:
                 total_outliers = len(outlier_indices)
                 outliers_message = [
@@ -3442,7 +3829,7 @@ def handle_data_cleaning(data, selected_columns, method, rows, find_clicks, remo
                     ], style={"color": "#ff6b6b"}),
                     html.P("Outliers summary:", style={"marginTop": "10px"}),
                     html.Ul([
-                        html.Li(f"{col}: {stats['count']} outliers") 
+                        html.Li(f"{col}: {stats['count']} outliers")
                         for col, stats in outliers_dict.items()
                     ]),
                     html.P("Preview of rows with outliers:", style={"marginTop": "10px"}),
@@ -3474,12 +3861,12 @@ def handle_data_cleaning(data, selected_columns, method, rows, find_clicks, remo
                 ], style={"color": "#51cf66"})
                 handle_button_disabled = True
                 outliers_store = None
-    
+
     # Handle outlier treatment
     elif ctx.triggered and ctx.triggered[0]['prop_id'] == 'handle-outliers-button.n_clicks' and outliers_data:
         outliers_dict = outliers_data['outliers_dict']
         outlier_indices = outliers_data['outlier_indices']
-        
+
         if outlier_handling == "remove":
             df = df.drop(index=outlier_indices)
             df_imputed = df.copy()
@@ -3493,18 +3880,18 @@ def handle_data_cleaning(data, selected_columns, method, rows, find_clicks, remo
                     replacement = df[col].median()
                 elif outlier_handling == "mean":
                     replacement = df[col].mean()
-                
+
                 df.loc[stats['indices'], col] = replacement
                 df_imputed = df.copy()
-            
+
             outliers_message = html.P([
                 html.I(className="fas fa-check-circle mr-2", style={"color": "#51cf66"}),
                 f"Replaced outliers in {len(outliers_dict)} columns using {outlier_handling}"
             ], style={"color": "#51cf66"})
-        
+
         handle_button_disabled = True
         outliers_store = None
-    
+
     # Handle imputation button click
     elif ctx.triggered and ctx.triggered[0]['prop_id'] == 'apply-imputation-button.n_clicks':
         if not selected_columns:
@@ -3530,22 +3917,22 @@ def handle_data_cleaning(data, selected_columns, method, rows, find_clicks, remo
                     else:  # Categorical or object columns
                         if method == "mode":
                             df_imputed[col] = df[col].fillna(df[col].mode()[0] if not df[col].mode().empty else np.nan)
-            
+
             success_toast_open = True
-    
+
     # Prepare table data
     columns = [{"name": col, "id": col} for col in df_imputed.columns]
     data = df_imputed.to_dict("records")
-    
+
     # Handle row display
     page_size = len(data) if rows == "all" and len(data) > 0 else (rows if rows else 10)
-    
+
     if len(data) == 0:
         missing_message = html.P(
             "Warning: The dataset is empty after applying operations.",
             style={"color": "#ff6b6b"}
         )
-    
+
     return data, columns, page_size, missing_message, remove_button_disabled, duplicates_message, duplicates_store, handle_button_disabled, outliers_message, outliers_store, success_toast_open, warning_toast_open
 
 # Statistics Callback - Updated with only histogram, scatter, bar, and pie charts
@@ -3579,6 +3966,8 @@ def generate_plots(n_clicks, x_axis, y_axis, plot_type, bin_size, data):
                 return go.Figure(), "Please select X-axis for histogram.", True
             if not pd.api.types.is_numeric_dtype(df[x_axis]):
                 return go.Figure(), "X-axis must be numeric for histograms.", True
+
+            # Histogram doesn't need y_axis, so we ignore it
             unique_vals = df[x_axis].dropna().unique()
             if len(unique_vals) == 2:
                 # Treat as categorical (binary)
@@ -3586,7 +3975,7 @@ def generate_plots(n_clicks, x_axis, y_axis, plot_type, bin_size, data):
                 fig = go.Figure(data=go.Bar(
                     x=[str(v) for v in val_counts.index],
                     y=val_counts.values,
-                    marker=dict(color='#1abc9c', line=dict(color='#16a085', width=2)),
+                    marker=dict(color='#1abc9c'),
                     opacity=0.85
                 ))
                 fig.update_layout(
@@ -3622,14 +4011,8 @@ def generate_plots(n_clicks, x_axis, y_axis, plot_type, bin_size, data):
                 return go.Figure(), "Please select both X-axis and Y-axis for bar chart.", True
             fig = px.bar(df, x=x_axis, y=y_axis, title=f"Bar Chart of {y_axis} vs {x_axis}")
 
-        # Pie Chart
-        elif plot_type == "pie":
-            if not x_axis or not y_axis:
-                return go.Figure(), "Please select both X-axis and Y-axis for pie chart.", True
-            fig = px.pie(df, names=x_axis, values=y_axis, title=f"Pie Chart of {y_axis} by {x_axis}")
-
         else:
-            return go.Figure(), "Invalid plot type selected. Supported types: histogram, scatter, bar, pie.", True
+            return go.Figure(), "Invalid plot type selected. Supported types: histogram, scatter, bar.", True
 
         # Apply the dark theme to the figure
         fig = apply_dark_theme(fig)
@@ -3704,7 +4087,7 @@ def export_csv(n_clicks, data):
 def generate_auto_visualizations(data, statistics_clicks):
     if not data or not statistics_clicks:
         return html.Div("Please upload data to see visualizations")
-    
+
     try:
         df = pd.DataFrame(data)
         if df.empty:
@@ -3714,7 +4097,7 @@ def generate_auto_visualizations(data, statistics_clicks):
         data_summary_plots = []
         distribution_plots = []
         category_plots = []
-        
+
         # Get column types
         numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
         categorical_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
@@ -3727,15 +4110,15 @@ def generate_auto_visualizations(data, statistics_clicks):
             subplot_titles=("Column Data Types", "Top Missing Values"),
             specs=[[{"type": "domain"}, {"type": "xy"}]]
         )
-        
+
         # Data Types Summary
         data_types = df.dtypes.value_counts().reset_index()
         data_types.columns = ['Data Type', 'Count']
         data_types['Data Type'] = data_types['Data Type'].astype(str)
-        
+
         fig_summary.add_trace(
             go.Pie(
-                labels=data_types['Data Type'], 
+                labels=data_types['Data Type'],
                 values=data_types['Count'],
                 hole=0.5,
                 textinfo='label+percent',
@@ -3746,12 +4129,12 @@ def generate_auto_visualizations(data, statistics_clicks):
             ),
             row=1, col=1
         )
-        
+
         # Missing Values Summary
         missing_data = df.isna().sum().reset_index()
         missing_data.columns = ['Column', 'Missing Values']
         missing_data = missing_data.sort_values('Missing Values', ascending=False).head(10)
-        
+
         if missing_data['Missing Values'].sum() > 0:
             fig_summary.add_trace(
                 go.Bar(
@@ -3764,12 +4147,12 @@ def generate_auto_visualizations(data, statistics_clicks):
                 ),
                 row=1, col=2
             )
-        
+
         fig_summary.update_layout(
             title="Data Composition Dashboard",
             height=450
         )
-        
+
         data_summary_plots.append(dbc.Col(
             dbc.Card([
                 dbc.CardBody([
@@ -3784,9 +4167,9 @@ def generate_auto_visualizations(data, statistics_clicks):
         for i in range(0, min(6, len(numeric_cols))):
             # Create individual distribution dashboards for each column
             col = numeric_cols[i]
-            
+
             fig_dist = go.Figure()
-            
+
             # Column distribution
             hist_data = df[col].dropna()
             if len(hist_data) > 5:  # Only plot if we have enough data
@@ -3812,7 +4195,7 @@ def generate_auto_visualizations(data, statistics_clicks):
                         name='Mean'
                     )
                 )
-            
+
             fig_dist.update_layout(
                 title=f"Distribution Analysis: {col}",
                 barmode='overlay',
@@ -3820,7 +4203,7 @@ def generate_auto_visualizations(data, statistics_clicks):
                 height=400,
                 bargap=0.05
             )
-            
+
             distribution_plots.append(dbc.Col(
                 dbc.Card([
                     dbc.CardBody([
@@ -3836,7 +4219,7 @@ def generate_auto_visualizations(data, statistics_clicks):
             for i, cat_col in enumerate(categorical_cols[:min(3, len(categorical_cols))]):
                 # Count the frequency of each category
                 cat_counts = df[cat_col].value_counts().nlargest(10)
-                
+
                 # Create a bar plot
                 fig_cat = go.Figure(data=go.Bar(
                     x=cat_counts.index,
@@ -3846,14 +4229,14 @@ def generate_auto_visualizations(data, statistics_clicks):
                         line=dict(color='rgba(255, 255, 255, 0.5)', width=1)
                     )
                 ))
-                
+
                 fig_cat.update_layout(
                     title=f"Category Distribution: {cat_col}",
                     xaxis_title=cat_col,
                     yaxis_title="Count",
                     height=400
                 )
-                
+
                 # Add to category plots
                 category_plots.append(dbc.Col(
                     dbc.Card([
@@ -3863,302 +4246,82 @@ def generate_auto_visualizations(data, statistics_clicks):
                     ], style=custom_css["card"]),
                     width=12, style={"marginBottom": "20px"}
                 ))
-        
+
         # Combine all plots with section headers
         all_plots = []
-        
+
         if data_summary_plots:
             all_plots.extend([
                 html.H3("Data Overview", className="dashboard-section-title"),
                 html.Div(data_summary_plots)
             ])
-        
+
+        # Add correlation heatmap for numeric variables if we have at least 2 numeric columns
+        if len(numeric_cols) >= 2:
+            # Create correlation matrix
+            corr_matrix = df[numeric_cols].corr()
+            
+            # Create a beautiful heatmap with custom color scale
+            corr_fig = go.Figure(data=go.Heatmap(
+                z=corr_matrix.values,
+                x=corr_matrix.columns,
+                y=corr_matrix.columns,
+                colorscale=[[0.0, '#3498db'],
+                           [0.25, '#2980b9'],
+                           [0.5, '#34495e'],
+                           [0.75, '#16a085'], 
+                           [1.0, '#1abc9c']],
+                zmin=-1, zmax=1,
+                text=corr_matrix.round(2).values,
+                texttemplate='%{text}',
+                hoverinfo='text',
+                hoverongaps=False
+            ))
+            
+            # Improve layout
+            corr_fig.update_layout(
+                title="Correlation Heatmap (Numeric Variables)",
+                height=max(400, len(numeric_cols) * 35),
+                xaxis_title="Variables",
+                yaxis_title="Variables",
+                margin=dict(l=60, r=40, t=70, b=60)
+            )
+            
+            # Add to plots
+            all_plots.extend([
+                html.H3("Correlation Analysis", className="dashboard-section-title"),
+                dbc.Col(
+                    dbc.Card([
+                        dbc.CardBody([
+                            dcc.Graph(figure=apply_dark_theme(corr_fig))
+                        ])
+                    ], style=custom_css["card"]),
+                    width=12, style={"marginBottom": "20px"}
+                )
+            ])
+
         if distribution_plots:
             all_plots.extend([
                 html.H3("Distribution Analysis", className="dashboard-section-title"),
                 html.Div(distribution_plots)
             ])
-        
+
         if category_plots:
             all_plots.extend([
                 html.H3("Categorical Analysis", className="dashboard-section-title"),
                 html.Div(category_plots)
             ])
-        
+
         if not all_plots:
             return html.Div("No visualizations could be generated for this dataset")
-        
+
         return html.Div(all_plots)
-    
+
     except Exception as e:
         return html.Div([
             html.H5("Error Generating Visualizations", style={"color": "var(--error)"}),
             html.P(f"An error occurred: {str(e)}", style={"color": "var(--text-secondary)"})
         ])
-
-# Correlation Callback
-@app.callback(
-    [
-        Output("numeric-correlation-plot", "figure"),
-        Output("label-correlation-plot", "figure"),
-        Output("onehot-correlation-plot", "figure"),
-    ],
-    [
-        Input("correlation-button", "n_clicks"),
-        Input("data-table", "data"),
-    ],
-)
-def generate_correlation_plots(n_clicks, data):
-    # Initialize empty figures
-    numeric_fig = go.Figure()
-    label_fig = go.Figure()
-    onehot_fig = go.Figure()
-    
-    # Apply dark theme to empty figures in case we return early
-    numeric_fig = apply_dark_theme(numeric_fig)
-    label_fig = apply_dark_theme(label_fig)
-    onehot_fig = apply_dark_theme(onehot_fig)
-    
-    # Return empty figures if no data
-    if not data:
-        return numeric_fig, label_fig, onehot_fig
-    
-    # Convert to DataFrame
-    df = pd.DataFrame(data)
-    
-    # 1. Numeric Correlation (only numeric columns)
-    try:
-        numeric_df = df.select_dtypes(include=['number'])
-        if len(numeric_df.columns) > 1:
-            numeric_corr = numeric_df.corr()
-            numeric_fig = go.Figure(
-                data=go.Heatmap(
-                    z=numeric_corr.values,
-                    x=numeric_corr.columns,
-                    y=numeric_corr.columns,
-                    colorscale='Blues',
-                    zmin=-1,
-                    zmax=1,
-                    colorbar=dict(title="Correlation"),
-                    hoverongaps=False,
-                )
-            )
-            numeric_fig.update_layout(
-                title="Correlation of Numeric Variables Only",
-                xaxis_title="Variables",
-                yaxis_title="Variables"
-            )
-            numeric_fig = apply_dark_theme(numeric_fig)
-        else:
-            numeric_fig = go.Figure()
-            numeric_fig.add_annotation(
-                text="Not enough numeric columns for correlation analysis (need at least 2).",
-                showarrow=False,
-                font=dict(color="var(--text-secondary)"),
-                xref="paper", yref="paper",
-                x=0.5, y=0.5
-            )
-            numeric_fig = apply_dark_theme(numeric_fig)
-    except Exception as e:
-        # Create an error message figure
-        numeric_fig = go.Figure()
-        numeric_fig.add_annotation(
-            text=f"Could not generate numeric correlation: {str(e)}",
-            showarrow=False,
-            font=dict(color="var(--text-secondary)"),
-            xref="paper", yref="paper",
-            x=0.5, y=0.5
-        )
-        numeric_fig = apply_dark_theme(numeric_fig)
-    
-    # 2. Label Encoding
-    try:
-        df_label = df.copy()
-        
-        # Keep track of columns we've successfully encoded
-        encoded_columns = []
-        
-        # Apply label encoding to categorical columns
-        for col in df_label.select_dtypes(include=["object"]).columns:
-            try:
-                df_label[col] = df_label[col].astype("category").cat.codes
-                encoded_columns.append(col)
-            except:
-                # Skip if encoding fails for a column
-                continue
-        
-        # Include original numeric columns
-        for col in df_label.select_dtypes(include=["number"]).columns:
-            encoded_columns.append(col)
-        
-        # Only compute correlation if we have enough columns
-        if len(encoded_columns) > 1:
-            # Only use successfully encoded columns
-            label_corr = df_label[encoded_columns].corr()
-            
-            label_fig = go.Figure(
-                data=go.Heatmap(
-                    z=label_corr.values,
-                    x=label_corr.columns,
-                    y=label_corr.columns,
-                    colorscale='Blues',
-                    zmin=-1,
-                    zmax=1,
-                    colorbar=dict(title="Correlation"),
-                    hoverongaps=False,
-                )
-            )
-            label_fig.update_layout(
-                title=f"Correlation with Label Encoding ({len(encoded_columns)} columns)",
-                xaxis_title="Variables",
-                yaxis_title="Variables"
-            )
-            label_fig = apply_dark_theme(label_fig)
-        else:
-            label_fig = go.Figure()
-            label_fig.add_annotation(
-                text="Not enough columns available for label encoding correlation.",
-                showarrow=False,
-                font=dict(color="var(--text-secondary)"),
-                xref="paper", yref="paper",
-                x=0.5, y=0.5
-            )
-            label_fig = apply_dark_theme(label_fig)
-    except Exception as e:
-        label_fig = go.Figure()
-        label_fig.add_annotation(
-            text=f"Could not generate label-encoded correlation: {str(e)}",
-            showarrow=False,
-            font=dict(color="var(--text-secondary)"),
-            xref="paper", yref="paper",
-            x=0.5, y=0.5
-        )
-        label_fig = apply_dark_theme(label_fig)
-    
-    # 3. One-Hot Encoding
-    try:
-        # Try pd.get_dummies (one-hot encoding) but catch any errors
-        try:
-            df_onehot = pd.get_dummies(df)
-        except Exception as e1:
-            # If standard one-hot fails, try to do it column by column
-            df_onehot = df.select_dtypes(include=['number']).copy()
-            for col in df.select_dtypes(include=['object']).columns:
-                try:
-                    # Try to encode each column separately
-                    dummies = pd.get_dummies(df[col], prefix=col)
-                    df_onehot = pd.concat([df_onehot, dummies], axis=1)
-                except:
-                    # Skip problematic columns
-                    continue
-        
-        # Compute correlation if we have enough columns 
-        if len(df_onehot.columns) > 1:
-            onehot_corr = df_onehot.corr()
-            
-            # If too many columns, create a simplified figure focusing on significant correlations
-            if len(onehot_corr.columns) > 50:
-                # Filter significant correlations to reduce visual clutter
-                # Create a mask for significant correlations (absolute value > 0.3 and not self-correlation)
-                mask = (abs(onehot_corr) > 0.3) & (abs(onehot_corr) < 1.0)
-                
-                # Find the columns with significant correlations
-                columns_with_sig_corr = set()
-                for i, col in enumerate(onehot_corr.columns):
-                    for j, row in enumerate(onehot_corr.index):
-                        if i != j and mask.iloc[i, j]:
-                            columns_with_sig_corr.add(col)
-                            columns_with_sig_corr.add(row)
-                
-                # If we have significant correlations, show them
-                if columns_with_sig_corr:
-                    significant_cols = list(columns_with_sig_corr)
-                    filtered_corr = onehot_corr.loc[significant_cols, significant_cols]
-                    
-                    # Create clustered heatmap for better visualization
-                    onehot_fig = px.imshow(
-                        filtered_corr,
-                        color_continuous_scale='RdBu_r',  # Red-Blue color scale (negative=red, positive=blue)
-                        zmin=-1,
-                        zmax=1
-                    )
-                    onehot_fig.update_layout(
-                        title=f"Significant One-Hot Encoded Correlations (|r| > 0.3, showing {len(significant_cols)} of {len(onehot_corr.columns)} variables)",
-                        xaxis_title="Variables",
-                        yaxis_title="Variables"
-                    )
-                else:
-                    # If no significant correlations found, show a clustered heatmap of top correlations
-                    # Get the most variable features (those with more diverse correlation values)
-                    correlation_variance = onehot_corr.var(axis=1).sort_values(ascending=False)
-                    top_features = correlation_variance.index[:min(30, len(correlation_variance))]
-                    filtered_corr = onehot_corr.loc[top_features, top_features]
-                    
-                    onehot_fig = px.imshow(
-                        filtered_corr,
-                        color_continuous_scale='RdBu_r',
-                        zmin=-1,
-                        zmax=1
-                    )
-                    onehot_fig.update_layout(
-                        title=f"Top Variable One-Hot Encoded Correlations (showing {len(top_features)} of {len(onehot_corr.columns)} variables)",
-                        xaxis_title="Variables",
-                        yaxis_title="Variables"
-                    )
-            else:
-                # For smaller correlation matrices, show all correlations with improved visualization
-                onehot_fig = go.Figure(
-                    data=go.Heatmap(
-                        z=onehot_corr.values,
-                        x=onehot_corr.columns,
-                        y=onehot_corr.columns,
-                        colorscale='RdBu_r',  # Red-Blue color scale for better contrast
-                        zmin=-1,
-                        zmax=1,
-                        colorbar=dict(
-                            title="Correlation",
-                            thickness=20
-                        ),
-                        hoverongaps=False,
-                        hovertemplate='%{x} x %{y}<br>Correlation: %{z:.3f}<extra></extra>'
-                    )
-                )
-                onehot_fig.update_layout(
-                    title=f"Correlation with One-Hot Encoding ({len(onehot_corr.columns)} Variables)",
-                    xaxis_title="Variables",
-                    yaxis_title="Variables",
-                    height=max(500, min(800, len(onehot_corr.columns) * 10))  # Dynamic height based on number of variables
-                )
-            
-            # Apply dark theme and additional layout improvements
-            onehot_fig = apply_dark_theme(onehot_fig)
-            onehot_fig.update_layout(
-                margin=dict(l=50, r=50, t=80, b=50),
-                xaxis=dict(tickangle=45),
-                autosize=True
-            )
-        else:
-            onehot_fig = go.Figure()
-            onehot_fig.add_annotation(
-                text="Not enough data for one-hot encoding correlation.",
-                showarrow=False,
-                font=dict(color="var(--text-secondary)"),
-                xref="paper", yref="paper",
-                x=0.5, y=0.5
-            )
-            onehot_fig = apply_dark_theme(onehot_fig)
-    except Exception as e:
-        onehot_fig = go.Figure()
-        onehot_fig.add_annotation(
-            text=f"Could not generate one-hot encoded correlation: {str(e)}",
-            showarrow=False,
-            font=dict(color="var(--text-secondary)"),
-            xref="paper", yref="paper",
-            x=0.5, y=0.5
-        )
-        onehot_fig = apply_dark_theme(onehot_fig)
-    
-    return numeric_fig, label_fig, onehot_fig
 
 # Tests Callback
 @app.callback(
@@ -4227,23 +4390,24 @@ def perform_test(n_clicks, test_type, x_axis, y_axis, data):
             if not pd.api.types.is_numeric_dtype(df[x_axis]) or not pd.api.types.is_numeric_dtype(df[y_axis]):
                 return go.Figure(), "Both X-axis and Y-axis must be numeric for Pearson Correlation.", [], []
 
-            # Direct import for Pearson correlation
-            from scipy.stats import pearsonr
+            # Drop rows with NaN or infinite values in either column
+            df_valid = df[[x_axis, y_axis]].replace([np.inf, -np.inf], np.nan).dropna()
+            if len(df_valid) < 2:
+                return go.Figure(), "Not enough valid data points for Pearson correlation.", [], []
 
-            corr, p_value = pearsonr(df[x_axis], df[y_axis])
-            
-            # Create a more detailed figure with regression line
-            fig = make_subplots(rows=1, cols=2, 
+            from scipy.stats import pearsonr
+            corr, p_value = pearsonr(df_valid[x_axis], df_valid[y_axis])
+
+            fig = make_subplots(rows=1, cols=2,
                                subplot_titles=('Scatter Plot with Regression Line', 'Density Distribution'),
                                specs=[[{"type": "xy"}, {"type": "xy"}]],
                                column_widths=[0.7, 0.3])
-            
-            # Add scatter plot with regression line
+
             fig.add_trace(
                 go.Scatter(
-                    x=df[x_axis], 
-                    y=df[y_axis], 
-                    mode='markers', 
+                    x=df_valid[x_axis],
+                    y=df_valid[y_axis],
+                    mode='markers',
                     marker=dict(
                         color='rgba(26, 188, 156, 0.6)',
                         size=8,
@@ -4256,27 +4420,25 @@ def perform_test(n_clicks, test_type, x_axis, y_axis, data):
                 ),
                 row=1, col=1
             )
-            
-            # Add regression line
-            coef = np.polyfit(df[x_axis], df[y_axis], 1)
-            line_x = np.array([df[x_axis].min(), df[x_axis].max()])
+
+            coef = np.polyfit(df_valid[x_axis], df_valid[y_axis], 1)
+            line_x = np.array([df_valid[x_axis].min(), df_valid[x_axis].max()])
             line_y = coef[0] * line_x + coef[1]
-            
+
             fig.add_trace(
                 go.Scatter(
-                    x=line_x, 
-                    y=line_y, 
-                    mode='lines', 
+                    x=line_x,
+                    y=line_y,
+                    mode='lines',
                     line=dict(color='rgba(231, 76, 60, 0.9)', width=2),
                     name=f'Regression Line (y = {coef[0]:.3f}x + {coef[1]:.3f})'
                 ),
                 row=1, col=1
             )
-            
-            # Add histogram for X variable instead of KDE
+
             fig.add_trace(
                 go.Histogram(
-                    x=df[x_axis],
+                    x=df_valid[x_axis],
                     marker=dict(
                         color='rgba(26, 188, 156, 0.7)',
                         line=dict(color='rgba(255, 255, 255, 0.5)', width=1)
@@ -4286,7 +4448,7 @@ def perform_test(n_clicks, test_type, x_axis, y_axis, data):
                 ),
                 row=1, col=2
             )
-            mean_val = df[x_axis].mean()
+            mean_val = df_valid[x_axis].mean()
             fig.add_shape(
                 type="line",
                 x0=mean_val, y0=0,
@@ -4295,20 +4457,18 @@ def perform_test(n_clicks, test_type, x_axis, y_axis, data):
                 line=dict(color="#3498db", width=2, dash="dash"),
                 row=1, col=2
             )
-            
-            # Update layout
+
             fig.update_layout(
                 title=f"Pearson Correlation: {x_axis} vs {y_axis} (r = {corr:.3f}, p = {p_value:.3f})",
                 height=500,
                 showlegend=True
             )
-            
+
             fig.update_xaxes(title_text=x_axis, row=1, col=1)
             fig.update_yaxes(title_text=y_axis, row=1, col=1)
             fig.update_xaxes(title_text="Value", row=1, col=2)
             fig.update_yaxes(title_text="Density", row=1, col=2)
-            
-            # Format the result text
+
             significance = "significant" if p_value < 0.05 else "not significant"
             strength = ""
             if abs(corr) < 0.3:
@@ -4317,9 +4477,9 @@ def perform_test(n_clicks, test_type, x_axis, y_axis, data):
                 strength = "moderate"
             else:
                 strength = "strong"
-                
+
             direction = "positive" if corr > 0 else "negative"
-            
+
             result_text = f"Pearson Correlation: {corr:.3f}, p-value: {p_value:.3f}<br>" + \
                          f"Interpretation: {strength} {direction} correlation ({significance} at α=0.05)"
 
@@ -4330,23 +4490,24 @@ def perform_test(n_clicks, test_type, x_axis, y_axis, data):
             if not pd.api.types.is_numeric_dtype(df[x_axis]) or not pd.api.types.is_numeric_dtype(df[y_axis]):
                 return go.Figure(), "Both X-axis and Y-axis must be numeric for Spearman Correlation.", [], []
 
-            # Direct import for Spearman correlation
-            from scipy.stats import spearmanr
+            # Drop rows with NaN or infinite values in either column
+            df_valid = df[[x_axis, y_axis]].replace([np.inf, -np.inf], np.nan).dropna()
+            if len(df_valid) < 2:
+                return go.Figure(), "Not enough valid data points for Spearman correlation.", [], []
 
-            corr, p_value = spearmanr(df[x_axis], df[y_axis])
-            
-            # Create a more detailed figure
-            fig = make_subplots(rows=1, cols=2, 
+            from scipy.stats import spearmanr
+            corr, p_value = spearmanr(df_valid[x_axis], df_valid[y_axis])
+
+            fig = make_subplots(rows=1, cols=2,
                                subplot_titles=('Scatter Plot with LOWESS Trend', 'Rank Correlation'),
                                specs=[[{"type": "xy"}, {"type": "xy"}]],
                                column_widths=[0.7, 0.3])
-            
-            # Add scatter plot to first subplot
+
             fig.add_trace(
                 go.Scatter(
-                    x=df[x_axis], 
-                    y=df[y_axis], 
-                    mode='markers', 
+                    x=df_valid[x_axis],
+                    y=df_valid[y_axis],
+                    mode='markers',
                     marker=dict(
                         color='rgba(26, 188, 156, 0.6)',
                         size=8,
@@ -4359,34 +4520,31 @@ def perform_test(n_clicks, test_type, x_axis, y_axis, data):
                 ),
                 row=1, col=1
             )
-            
-            # Try to add LOWESS smoothing if statsmodels is available
+
             try:
                 from statsmodels.nonparametric.smoothers_lowess import lowess
-                lowess_result = lowess(df[y_axis], df[x_axis], frac=0.5)
+                lowess_result = lowess(df_valid[y_axis], df_valid[x_axis], frac=0.5)
                 fig.add_trace(
                     go.Scatter(
-                        x=lowess_result[:, 0], 
-                        y=lowess_result[:, 1], 
-                        mode='lines', 
+                        x=lowess_result[:, 0],
+                        y=lowess_result[:, 1],
+                        mode='lines',
                         line=dict(color='rgba(231, 76, 60, 0.9)', width=2),
                         name='LOWESS Trend'
                     ),
                     row=1, col=1
                 )
             except Exception:
-                # Fallback if lowess fails
                 pass
-            
-            # Add rank scatter plot (second subplot)
-            x_rank = df[x_axis].rank()
-            y_rank = df[y_axis].rank()
-            
+
+            x_rank = df_valid[x_axis].rank()
+            y_rank = df_valid[y_axis].rank()
+
             fig.add_trace(
                 go.Scatter(
-                    x=x_rank, 
-                    y=y_rank, 
-                    mode='markers', 
+                    x=x_rank,
+                    y=y_rank,
+                    mode='markers',
                     marker=dict(
                         color='rgba(155, 89, 182, 0.6)',
                         size=8,
@@ -4399,20 +4557,18 @@ def perform_test(n_clicks, test_type, x_axis, y_axis, data):
                 ),
                 row=1, col=2
             )
-            
-            # Update layout
+
             fig.update_layout(
                 title=f"Spearman Rank Correlation: {x_axis} vs {y_axis} (ρ = {corr:.3f}, p = {p_value:.3f})",
                 height=500,
                 showlegend=True
             )
-            
+
             fig.update_xaxes(title_text=x_axis, row=1, col=1)
             fig.update_yaxes(title_text=y_axis, row=1, col=1)
             fig.update_xaxes(title_text=f"{x_axis} Rank", row=1, col=2)
             fig.update_yaxes(title_text=f"{y_axis} Rank", row=1, col=2)
-            
-            # Format the result text with interpretation
+
             significance = "significant" if p_value < 0.05 else "not significant"
             strength = ""
             if abs(corr) < 0.3:
@@ -4421,9 +4577,9 @@ def perform_test(n_clicks, test_type, x_axis, y_axis, data):
                 strength = "moderate"
             else:
                 strength = "strong"
-                
+
             direction = "positive" if corr > 0 else "negative"
-            
+
             result_text = f"Spearman Correlation: {corr:.3f}, p-value: {p_value:.3f}<br>" + \
                          f"Interpretation: {strength} {direction} monotonic relationship ({significance} at α=0.05)"
 
@@ -4461,40 +4617,40 @@ def perform_regression(n_clicks, x_var, y_var, data):
 
     try:
         df = pd.DataFrame(data)
-        
+
         # Check if variables are numeric
         if not pd.api.types.is_numeric_dtype(df[x_var]) or not pd.api.types.is_numeric_dtype(df[y_var]):
             return go.Figure(), "", "", "Both variables must be numeric for regression analysis.", True
-        
+
         # Drop any rows with missing values
         df = df[[x_var, y_var]].dropna()
-        
+
         if len(df) < 2:
             return go.Figure(), "", "", "Not enough valid data points for regression analysis.", True
-        
+
         # Perform regression using statsmodels
         X = df[x_var].values.reshape(-1, 1)
         y = df[y_var].values
-        
+
         # Add constant for intercept
         X_with_const = sm.add_constant(X)
-        
+
         # Fit the model
         model = sm.OLS(y, X_with_const)
         results = model.fit()
-        
+
         # Get coefficients
         intercept = results.params[0]
         slope = results.params[1]
         r_squared = results.rsquared
-        
+
         # Calculate confidence intervals
         predictions = results.get_prediction(X_with_const)
         ci = predictions.conf_int()
-        
+
         # Create the plot
         fig = go.Figure()
-        
+
         # Add scatter plot of data points
         fig.add_trace(
             go.Scatter(
@@ -4509,11 +4665,11 @@ def perform_regression(n_clicks, x_var, y_var, data):
                 )
             )
         )
-        
+
         # Add regression line
         x_range = np.linspace(df[x_var].min(), df[x_var].max(), 100)
         y_pred = slope * x_range + intercept
-        
+
         fig.add_trace(
             go.Scatter(
                 x=x_range,
@@ -4523,12 +4679,12 @@ def perform_regression(n_clicks, x_var, y_var, data):
                 line=dict(color='#EA4335', width=3)
             )
         )
-        
+
         # Add confidence intervals
         x_for_ci = sm.add_constant(x_range.reshape(-1, 1))
         predictions = results.get_prediction(x_for_ci)
         ci = predictions.conf_int()
-        
+
         fig.add_trace(
             go.Scatter(
                 x=x_range,
@@ -4538,7 +4694,7 @@ def perform_regression(n_clicks, x_var, y_var, data):
                 name='95% Confidence Interval'
             )
         )
-        
+
         fig.add_trace(
             go.Scatter(
                 x=x_range,
@@ -4549,7 +4705,7 @@ def perform_regression(n_clicks, x_var, y_var, data):
                 name='95% Confidence Interval'
             )
         )
-        
+
         # Update layout
         fig.update_layout(
             title=f"Linear Regression: {y_var} vs {x_var}",
@@ -4557,32 +4713,32 @@ def perform_regression(n_clicks, x_var, y_var, data):
             yaxis_title=y_var,
             hovermode='closest'
         )
-        
+
         # Format equation
         equation = f"y = {slope:.3f}x {'+' if intercept >= 0 else '-'} {abs(intercept):.3f}"
-        
+
         # Format metrics
         metrics = html.Div([
             html.P([
-                html.Strong("Slope (m): "), 
+                html.Strong("Slope (m): "),
                 f"{slope:.3f}"
             ], style={"marginBottom": "10px"}),
             html.P([
-                html.Strong("Intercept (b): "), 
+                html.Strong("Intercept (b): "),
                 f"{intercept:.3f}"
             ], style={"marginBottom": "10px"}),
             html.P([
-                html.Strong("R² Score: "), 
+                html.Strong("R² Score: "),
                 f"{r_squared:.3f}"
             ], style={"marginBottom": "10px"}),
             html.P([
-                html.Strong("P-value: "), 
+                html.Strong("P-value: "),
                 f"{results.f_pvalue:.3e}"
             ], style={"marginBottom": "10px"}),
         ])
-        
+
         return apply_dark_theme(fig), equation, metrics, "", False
-        
+
     except Exception as e:
         return go.Figure(), "", "", f"Error performing regression: {str(e)}", True
 
@@ -4602,35 +4758,35 @@ def perform_regression(n_clicks, x_var, y_var, data):
 def make_prediction(n_clicks, x_value, x_var, y_var, data):
     if not n_clicks or x_value is None or not x_var or not y_var or not data:
         return "", False
-    
+
     try:
         df = pd.DataFrame(data)
-        
+
         # Check if variables are numeric
         if not pd.api.types.is_numeric_dtype(df[x_var]) or not pd.api.types.is_numeric_dtype(df[y_var]):
             return "Error: Variables must be numeric", True
-        
+
         # Drop any rows with missing values
         df = df[[x_var, y_var]].dropna()
-        
+
         if len(df) < 2:
             return "Error: Not enough data points", True
-        
+
         # Perform regression
         X = df[x_var].values.reshape(-1, 1)
         y = df[y_var].values
-        
+
         X_with_const = sm.add_constant(X)
         model = sm.OLS(y, X_with_const)
         results = model.fit()
-        
+
         # Make prediction
         x_new = np.array([[1, float(x_value)]])
         prediction = results.predict(x_new)[0]
-        
+
         # Get prediction interval
         prediction_interval = results.get_prediction(x_new).conf_int()[0]
-        
+
         return (
             html.Div([
                 html.P(f"Predicted {y_var}: {prediction:.3f}", style={"fontSize": "1.2em", "marginBottom": "10px"}),
@@ -4639,7 +4795,7 @@ def make_prediction(n_clicks, x_value, x_var, y_var, data):
             ]),
             False
         )
-        
+
     except Exception as e:
         return f"Error: {str(e)}", True
 
@@ -4654,7 +4810,7 @@ def make_prediction(n_clicks, x_value, x_var, y_var, data):
 def update_regression_dropdowns(data):
     if not data:
         return [], []
-    
+
     try:
         df = pd.DataFrame(data)
         numeric_cols = df.select_dtypes(include=['number']).columns
@@ -4668,7 +4824,7 @@ def update_regression_dropdowns(data):
 def generate_eda_report_components(df):
     """Generate components for the EDA report from the dataframe"""
     components = []
-    
+
     # ---- 1. OVERVIEW SECTION ----
     overview_card = dbc.Card([
         dbc.CardHeader("Dataset Overview", style=custom_css["card_header"]),
@@ -4680,7 +4836,7 @@ def generate_eda_report_components(df):
                     html.P(f"Number of Columns: {df.shape[1]}", style={"color": "var(--text-primary)", "marginBottom": "5px"}),
                     html.P(f"Duplicate Rows: {df.duplicated().sum()}", style={"color": "var(--text-primary)", "marginBottom": "5px"}),
                     html.P(f"Total Missing Values: {df.isna().sum().sum()}", style={"color": "var(--text-primary)", "marginBottom": "15px"}),
-                    
+
                     html.H5("Data Types", style={"color": "var(--primary)", "marginBottom": "15px", "marginTop": "20px"}),
                     dbc.Table(
                         # Create a table with column names and their data types
@@ -4700,7 +4856,7 @@ def generate_eda_report_components(df):
                         style={"backgroundColor": "var(--card-bg)", "color": "var(--text-primary)"}
                     ),
                 ], width=6),
-                
+
                 dbc.Col([
                     html.H5("Missing Values by Column", style={"color": "var(--primary)", "marginBottom": "15px"}),
                     dcc.Graph(
@@ -4715,40 +4871,40 @@ def generate_eda_report_components(df):
                             )
                         )
                     ),
-                    
+
                     html.H5("Dataset Warnings", style={"color": "var(--primary)", "marginBottom": "15px", "marginTop": "20px"}),
                     html.Ul([
                         # Check for various potential issues in the dataset
-                        html.Li(f"Constant columns: {sum(df.nunique() == 1)}", 
+                        html.Li(f"Constant columns: {sum(df.nunique() == 1)}",
                                 style={"color": "var(--text-primary)"}),
-                        html.Li(f"Columns with >50% missing values: {sum(df.isna().mean() > 0.5)}", 
+                        html.Li(f"Columns with >50% missing values: {sum(df.isna().mean() > 0.5)}",
                                 style={"color": "var(--warning)" if sum(df.isna().mean() > 0.5) > 0 else "var(--text-primary)"}),
-                        html.Li(f"High cardinality categorical columns: {sum([df[col].nunique() > 50 for col in df.select_dtypes(include=['object']).columns] if not df.select_dtypes(include=['object']).empty else [])}", 
+                        html.Li(f"High cardinality categorical columns: {sum([df[col].nunique() > 50 for col in df.select_dtypes(include=['object']).columns] if not df.select_dtypes(include=['object']).empty else [])}",
                                 style={"color": "var(--warning)" if sum([df[col].nunique() > 50 for col in df.select_dtypes(include=['object']).columns] if not df.select_dtypes(include=['object']).empty else []) > 0 else "var(--text-primary)"}),
                     ])
                 ], width=6)
             ])
         ])
     ], style=custom_css["card"])
-    
+
     components.append(dbc.Row([dbc.Col(overview_card, width=12)], className="mb-4"))
-    
+
     # ---- 2. DESCRIPTIVE STATISTICS ----
     # Get numeric and categorical columns
     numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
     categorical_cols = df.select_dtypes(include=['object', 'category']).columns.tolist()
-    
+
     # 2.1 Numeric Statistics
     if numeric_cols:
         # Convert the describe dataframe to a presentable format
         desc_df = df[numeric_cols].describe().transpose().reset_index()
         desc_df = desc_df.rename(columns={'index': 'Column'})
-        
+
         # Round all numeric columns to 3 decimal places
         for col in desc_df.columns:
             if col != 'Column':
                 desc_df[col] = desc_df[col].round(3)
-        
+
         stats_card = dbc.Card([
             dbc.CardHeader("Numerical Statistics", style=custom_css["card_header"]),
             dbc.CardBody([
@@ -4762,21 +4918,21 @@ def generate_eda_report_components(df):
                 )
             ])
         ], style=custom_css["card"])
-        
+
         components.append(dbc.Row([dbc.Col(stats_card, width=12)], className="mb-4"))
-    
+
     # 2.2 Categorical Statistics (value counts for top categories)
     if categorical_cols:
         cat_stats_rows = []
-        
+
         for col in categorical_cols[:5]:  # Limit to first 5 categorical columns for brevity
             value_counts = df[col].value_counts().head(5).reset_index()
             value_counts.columns = ['Value', 'Count']
-            
+
             # Calculate percentage
             total = len(df)
             value_counts['Percentage'] = (value_counts['Count'] / total * 100).round(2)
-            
+
             cat_stats_rows.append(
                 dbc.Row([
                     dbc.Col([
@@ -4795,8 +4951,8 @@ def generate_eda_report_components(df):
                         dcc.Graph(
                             figure=apply_dark_theme(
                                 px.pie(
-                                    value_counts, 
-                                    values='Count', 
+                                    value_counts,
+                                    values='Count',
                                     names='Value',
                                     title=f"Distribution of '{col}'",
                                     height=300
@@ -4806,14 +4962,14 @@ def generate_eda_report_components(df):
                     ], width=6)
                 ])
             )
-        
+
         cat_stats_card = dbc.Card([
             dbc.CardHeader("Categorical Variables", style=custom_css["card_header"]),
             dbc.CardBody(cat_stats_rows)
         ], style=custom_css["card"])
-        
+
         components.append(dbc.Row([dbc.Col(cat_stats_card, width=12)], className="mb-4"))
-    
+
     # ---- 3. VISUALIZATIONS ----
     # 3.1 Histograms for Numeric Columns
     if numeric_cols:
@@ -4832,31 +4988,31 @@ def generate_eda_report_components(df):
             fig.update_layout(bargap=0.05)
             mean_val = df[col].mean()
             fig.add_vline(x=mean_val, line_dash="dash", line_color="#3498db")
-            
+
             hist_figs.append(
                 dbc.Col([
                     dcc.Graph(figure=apply_dark_theme(fig))
                 ], width=6)
             )
-        
+
         # Arrange histograms in rows
         hist_rows = []
         for i in range(0, len(hist_figs), 2):
             row_figs = hist_figs[i:i+2]
             hist_rows.append(dbc.Row(row_figs, className="mb-4"))
-        
+
         hist_card = dbc.Card([
             dbc.CardHeader("Distribution of Numeric Variables", style=custom_css["card_header"]),
             dbc.CardBody(hist_rows)
         ], style=custom_css["card"])
-        
+
         components.append(dbc.Row([dbc.Col(hist_card, width=12)], className="mb-4"))
-    
+
     # 3.3 Correlation Heatmap
     if len(numeric_cols) > 1:
         # Calculate correlation matrix
         corr_matrix = df[numeric_cols].corr().round(2)
-        
+
         # Create heatmap
         corr_fig = px.imshow(
             corr_matrix,
@@ -4865,17 +5021,17 @@ def generate_eda_report_components(df):
             title="Correlation Matrix",
             aspect="auto"
         )
-        
+
         corr_card = dbc.Card([
             dbc.CardHeader("Correlation Heatmap", style=custom_css["card_header"]),
-            dbc.CardBody([
-                dcc.Graph(figure=apply_dark_theme(corr_fig))
-            ])
+                        dbc.CardBody([
+                            dcc.Graph(figure=apply_dark_theme(corr_fig))
+                        ])
         ], style=custom_css["card"])
-        
+
         # Add correlation card to the components
         components.append(dbc.Row([dbc.Col(corr_card, width=12)], className="mb-4"))
-        
+
     return components
 
 # Add the EDA Report Callback
@@ -4888,24 +5044,24 @@ def generate_eda_report_components(df):
 def generate_eda_report(n_clicks, data):
     if not n_clicks or not data:
         return html.Div("Please upload data and click 'Generate EDA Report' to see the analysis.")
-    
+
     try:
         # Convert data to DataFrame
         df = pd.DataFrame(data)
-        
+
         if df.empty:
             return html.Div("No data available to analyze.")
-        
+
         # Generate report components
         report_components = generate_eda_report_components(df)
-        
+
         # Add introduction section at the top
         intro = html.Div([
             html.H4("Exploratory Data Analysis Report", style={"color": "var(--primary)", "marginBottom": "20px"}),
             html.P("This automated report provides insights into your dataset structure, statistics, and visualizations.",
                   style={"color": "var(--text-secondary)", "marginBottom": "30px"}),
         ])
-        
+
         # Final report layout
         report = html.Div([
             intro,
@@ -4916,9 +5072,9 @@ def generate_eda_report(n_clicks, data):
                       style={"color": "var(--text-secondary)", "textAlign": "center", "fontSize": "12px", "opacity": "0.7"})
             ])
         ])
-        
+
         return report
-    
+
     except Exception as e:
         return html.Div([
             html.H5("Error Generating Report", style={"color": "var(--error)"}),
@@ -4935,7 +5091,6 @@ def update_plot_type_dropdown(data):
         {"label": html.Span("Histogram", style={"color": "#FFFFFF"}), "value": "histogram"},
         {"label": html.Span("Scatter Plot", style={"color": "#FFFFFF"}), "value": "scatter"},
         {"label": html.Span("Bar Chart", style={"color": "#FFFFFF"}), "value": "bar"},
-        {"label": html.Span("Pie Chart", style={"color": "#FFFFFF"}), "value": "pie"},
     ]
 
 # Update axis dropdowns based on plot type
@@ -4943,6 +5098,8 @@ def update_plot_type_dropdown(data):
     [
         Output("x-axis-dropdown", "options", allow_duplicate=True),
         Output("y-axis-dropdown", "options", allow_duplicate=True),
+        Output("y-axis-dropdown", "disabled"),  # Add this output to disable Y-axis when not needed
+        Output("y-axis-dropdown", "placeholder"),  # Add this output to update placeholder text
     ],
     [
         Input("plot-type-dropdown", "value"),
@@ -4952,33 +5109,42 @@ def update_plot_type_dropdown(data):
 )
 def update_axis_dropdowns(plot_type, data):
     if not data:
-        return [], []
-    
+        return [], [], True, "Select Y-axis"
+
     df = pd.DataFrame(data)
-    
-    # Get column types
-    numeric_cols = df.select_dtypes(include=['number']).columns.tolist()
-    all_cols = df.columns.tolist()
-    
-    # Create options
-    numeric_options = [{"label": html.Span(col, style={"color": "#FFFFFF"}), "value": col} for col in numeric_cols]
-    all_options = [{"label": html.Span(col, style={"color": "#FFFFFF"}), "value": col} for col in all_cols]
-    
-    # Set options based on plot type
+
+    # Get column types for options
+    numeric_cols = [col for col in df.columns if pd.api.types.is_numeric_dtype(df[col])]
+    categorical_cols = [col for col in df.columns if not pd.api.types.is_numeric_dtype(df[col])]
+
+    all_cols = list(df.columns)
+    y_placeholder = "Select Y-axis"
+
     if plot_type == "histogram":
-        # Histogram: X must be numeric, no Y needed
-        return numeric_options, []
+        # For histogram, we only need X-axis numeric
+        x_options = [{"label": col, "value": col} for col in numeric_cols]
+        y_options = []  # No Y-axis needed for histograms
+        disable_y = True  # Disable Y-axis dropdown
+        y_placeholder = "Not needed for histogram"
+
     elif plot_type == "scatter":
-        # Scatter: Both X and Y must be numeric
-        return numeric_options, numeric_options
+        # For scatter, both X and Y should be numeric
+        x_options = [{"label": col, "value": col} for col in numeric_cols]
+        y_options = [{"label": col, "value": col} for col in numeric_cols]
+        disable_y = False
+
     elif plot_type == "bar":
-        # Bar: X can be any, Y must be numeric
-        return all_options, numeric_options
-    elif plot_type == "pie":
-        # Pie: X for labels (any), Y for values (numeric)
-        return all_options, numeric_options
+        # For bar charts, X can be any column, Y should be numeric
+        x_options = [{"label": col, "value": col} for col in all_cols]
+        y_options = [{"label": col, "value": col} for col in numeric_cols]
+        disable_y = False
+
     else:
-        return all_options, all_options
+        x_options = [{"label": col, "value": col} for col in all_cols]
+        y_options = [{"label": col, "value": col} for col in all_cols]
+        disable_y = False
+
+    return x_options, y_options, disable_y, y_placeholder
 
 # Add a new callback to update test dropdowns based on test type
 @app.callback(
@@ -4997,21 +5163,21 @@ def update_axis_dropdowns(plot_type, data):
 def update_test_dropdowns(test_type, data):
     if not data or not test_type:
         return [], [], None, None
-    
+
     df = pd.DataFrame(data)
-    
+
     # Reset dropdown values
     x_value = None
     y_value = None
-    
+
     # Get column types
     categorical_cols = [col for col in df.columns if not pd.api.types.is_numeric_dtype(df[col])]
     numeric_cols = [col for col in df.columns if pd.api.types.is_numeric_dtype(df[col])]
-    
+
     # Format dropdown options
     categorical_options = [{"label": html.Span(col, style={"color": "#FFFFFF"}), "value": col} for col in categorical_cols]
     numeric_options = [{"label": html.Span(col, style={"color": "#FFFFFF"}), "value": col} for col in numeric_cols]
-    
+
     # Select options based on test type
     if test_type == "chi2":
         # Chi-squared: Both X and Y should be categorical
@@ -5037,7 +5203,7 @@ def update_test_dropdowns(test_type, data):
 def handle_imputation_button(n_clicks, selected_columns):
     if not n_clicks:
         return False, False
-    
+
     # Show warning if no columns selected
     if not selected_columns:
         return False, True
@@ -5056,7 +5222,7 @@ def handle_imputation_button(n_clicks, selected_columns):
 def update_prediction_dropdowns(data):
     if not data:
         return [], []
-    
+
     try:
         df = pd.DataFrame(data)
         options = [{"label": html.Span(col, style={"color": "#FFFFFF"}), "value": col} for col in df.columns]
@@ -5080,12 +5246,12 @@ def update_prediction_dropdowns(data):
 def create_manual_input_fields(selected_features, feature_info, model_info):
     if not selected_features or not feature_info or not model_info:
         return [], True
-    
+
     input_fields = []
-    
+
     for feature in selected_features:
         feature_type = feature_info.get(feature, {}).get("type", "numeric")
-        
+
         if feature_type == "categorical":
             categories = feature_info.get(feature, {}).get("categories", [])
             input_fields.append(
@@ -5122,7 +5288,7 @@ def create_manual_input_fields(selected_features, feature_info, model_info):
                     )
                 ], style={"marginBottom": "15px"})
             )
-    
+
     return input_fields, False
 
 # Train model callback
@@ -5148,23 +5314,23 @@ def create_manual_input_fields(selected_features, feature_info, model_info):
 def train_model(n_clicks, data, target, features, n_estimators, max_depth, test_size, random_state):
     if not n_clicks or not data or not target or not features:
         return None, None, None, "", True
-    
+
     try:
         df = pd.DataFrame(data)
-        
+
         # Handle missing values
         df = df.dropna(subset=[target] + features)
-        
+
         if len(df) < 10:
             return None, None, None, html.Div([
                 html.I(className="fas fa-exclamation-circle mr-2", style={"color": "#ff6b6b"}),
                 "Not enough data after removing missing values. Need at least 10 rows."
             ], style={"color": "#ff6b6b"}), True
-        
+
         # Prepare feature information for encoding/preprocessing
         feature_info = {}
         X_processed = pd.DataFrame()
-        
+
         # Process each feature
         for feature in features:
             if pd.api.types.is_numeric_dtype(df[feature]):
@@ -5187,7 +5353,7 @@ def train_model(n_clicks, data, target, features, n_estimators, max_depth, test_
                 for category in unique_values:
                     col_name = f"{feature}_{category}"
                     X_processed[col_name] = (df[feature] == category).astype(int)
-        
+
         # Process target variable
         y = df[target]
         if not pd.api.types.is_numeric_dtype(y) and len(y.unique()) <= 10:
@@ -5203,18 +5369,18 @@ def train_model(n_clicks, data, target, features, n_estimators, max_depth, test_
             # For numeric target or high-cardinality categorical, treat as regression
             y_encoded = y
             target_info = {"type": "numeric"}
-        
+
         # Split data into train and test sets
         X_train, X_test, y_train, y_test = get_sklearn('train_test_split')(
             X_processed, y_encoded, test_size=test_size, random_state=random_state
         )
-        
+
         # Adjust max_depth parameter
         if max_depth is None or max_depth == "":
             max_depth = None
         else:
             max_depth = int(max_depth)
-        
+
         # Train model
         model = get_sklearn('RandomForestClassifier')(
             n_estimators=n_estimators,
@@ -5222,14 +5388,14 @@ def train_model(n_clicks, data, target, features, n_estimators, max_depth, test_
             random_state=random_state
         )
         model.fit(X_train, y_train)
-        
+
         # Calculate metrics
         train_score = model.score(X_train, y_train)
         test_score = model.score(X_test, y_test)
-        
+
         # Store feature importances
         feature_importances = dict(zip(X_processed.columns, model.feature_importances_))
-        
+
         # Store model information (note: we can't store the actual model object in dcc.Store)
         model_info = {
             "target": target,
@@ -5241,7 +5407,7 @@ def train_model(n_clicks, data, target, features, n_estimators, max_depth, test_
             "random_state": random_state,
             "test_size": test_size
         }
-        
+
         # Create model metrics
         metrics = {
             "train_score": train_score,
@@ -5249,14 +5415,14 @@ def train_model(n_clicks, data, target, features, n_estimators, max_depth, test_
             "n_samples": len(df),
             "n_features": len(X_processed.columns)
         }
-        
+
         # Create status message with metrics
         status = html.Div([
             html.Div([
                 html.I(className="fas fa-check-circle mr-2", style={"color": "#51cf66"}),
                 "Model trained successfully!"
             ], style={"color": "#51cf66", "fontWeight": "bold", "marginBottom": "15px"}),
-            
+
             html.Div([
                 html.Div([
                     html.Strong("Train Score: "),
@@ -5276,14 +5442,14 @@ def train_model(n_clicks, data, target, features, n_estimators, max_depth, test_
                 ])
             ], style={"color": "#e6e6e6"})
         ])
-        
+
         return model_info, feature_info, metrics, status, False
     except Exception as e:
         error_message = html.Div([
             html.I(className="fas fa-exclamation-circle mr-2", style={"color": "#ff6b6b"}),
             f"Error training model: {str(e)}"
         ], style={"color": "#ff6b6b"})
-        
+
         return None, None, None, error_message, True
 
 # Process uploaded prediction file
@@ -5301,10 +5467,10 @@ def train_model(n_clicks, data, target, features, n_estimators, max_depth, test_
 def process_prediction_file(contents, filename, required_features):
     if not contents or not required_features:
         return "Upload a file for prediction", None
-    
+
     content_type, content_string = contents.split(",")
     decoded = base64.b64decode(content_string)
-    
+
     try:
         if "csv" in filename.lower():
             df = pd.read_csv(StringIO(decoded.decode("utf-8")))
@@ -5312,18 +5478,18 @@ def process_prediction_file(contents, filename, required_features):
             df = pd.read_excel(io.BytesIO(decoded))
         else:
             return f"Unsupported file format: {filename}", None
-        
+
         # Check if required features are present
         missing_features = [feature for feature in required_features if feature not in df.columns]
-        
+
         if missing_features:
             return f"Missing required features: {', '.join(missing_features)}", None
-        
+
         # Store only required columns
         prediction_df = df[required_features].to_dict('records')
-        
+
         return f"File processed: {filename} ({len(df)} rows)", prediction_df
-    
+
     except Exception as e:
         return f"Error processing file: {str(e)}", None
 
@@ -5348,19 +5514,19 @@ def make_predictions(manual_clicks, file_clicks, manual_values, manual_ids, file
             html.I(className="fas fa-exclamation-circle mr-2", style={"color": "#ff6b6b"}),
             "Please train a model first"
         ], style={"color": "#ff6b6b"})
-    
+
     ctx = dash.callback_context
     if not ctx.triggered:
         return ""
-    
+
     button_id = ctx.triggered[0]["prop_id"].split(".")[0]
-    
+
     try:
         # Get target information
         target = model_info["target"]
         target_info = model_info["target_info"]
         features = model_info["features"]
-        
+
         if button_id == "predict-button-manual":
             # Process manual input
             if not manual_values or not manual_ids:
@@ -5368,16 +5534,16 @@ def make_predictions(manual_clicks, file_clicks, manual_values, manual_ids, file
                     html.I(className="fas fa-exclamation-circle mr-2", style={"color": "#ff6b6b"}),
                     "Please fill all input fields"
                 ], style={"color": "#ff6b6b"})
-            
+
             # Create a dictionary with feature names and values
             input_data = {}
             for value, id_obj in zip(manual_values, manual_ids):
                 feature = id_obj["feature"]
                 input_data[feature] = value
-            
+
             # Convert to DataFrame with a single row
             prediction_df = pd.DataFrame([input_data])
-            
+
         elif button_id == "predict-button-file":
             # Process file input
             if not file_data:
@@ -5385,14 +5551,14 @@ def make_predictions(manual_clicks, file_clicks, manual_values, manual_ids, file
                     html.I(className="fas fa-exclamation-circle mr-2", style={"color": "#ff6b6b"}),
                     "Please upload a file for prediction"
                 ], style={"color": "#ff6b6b"})
-            
+
             prediction_df = pd.DataFrame(file_data)
         else:
             return ""
-        
+
         # Preprocess input data similarly to training
         X_processed = pd.DataFrame()
-        
+
         # Process each feature
         for feature in features:
             if feature not in prediction_df.columns:
@@ -5400,9 +5566,9 @@ def make_predictions(manual_clicks, file_clicks, manual_values, manual_ids, file
                     html.I(className="fas fa-exclamation-circle mr-2", style={"color": "#ff6b6b"}),
                     f"Missing feature: {feature}"
                 ], style={"color": "#ff6b6b"})
-            
+
             feature_type = feature_info.get(feature, {}).get("type", "numeric")
-            
+
             if feature_type == "numeric":
                 # Normalize numeric features
                 mean = feature_info[feature]["mean"]
@@ -5414,7 +5580,7 @@ def make_predictions(manual_clicks, file_clicks, manual_values, manual_ids, file
                 for category in categories:
                     col_name = f"{feature}_{category}"
                     X_processed[col_name] = (prediction_df[feature].astype(str) == str(category)).astype(int)
-        
+
         # Check for missing columns that were in training data
         if button_id == "predict-button-file":
             # For file predictions, we need to manually implement a RandomForestClassifier
@@ -5424,21 +5590,21 @@ def make_predictions(manual_clicks, file_clicks, manual_values, manual_ids, file
                 max_depth=model_info["max_depth"],
                 random_state=model_info["random_state"]
             )
-            
+
             # Re-train the model on the entire dataset
             # Note: In a production app, we would store the model rather than re-training
             df = pd.DataFrame(file_data)
-            
+
             # Process features and target
             X = df[features]
             y = df[target]
-            
+
             # Train the model
             random_forest.fit(X, y)
-            
+
             # Make predictions
             predictions = random_forest.predict(X)
-            
+
             # Return results for file prediction
             results_table = dash_table.DataTable(
                 data=prediction_df.assign(Prediction=predictions).to_dict('records'),
@@ -5459,7 +5625,7 @@ def make_predictions(manual_clicks, file_clicks, manual_values, manual_ids, file
                     }
                 ],
             )
-            
+
             return html.Div([
                 html.Div([
                     html.I(className="fas fa-check-circle mr-2", style={"color": "#51cf66"}),
@@ -5472,14 +5638,14 @@ def make_predictions(manual_clicks, file_clicks, manual_values, manual_ids, file
             # In a real implementation, we would store the trained model
             # Here, we'll use the feature importances to roughly simulate the model
             importances = model_info["feature_importances"]
-            
+
             # Get the most important features and their values
             top_features = sorted(importances.items(), key=lambda x: x[1], reverse=True)[:3]
             feature_values = []
             for feature, importance in top_features:
                 if feature in X_processed.columns:
                     feature_values.append(f"{feature}: {X_processed[feature].values[0]:.3f}")
-            
+
             # Make a simulated prediction
             if target_info["type"] == "categorical":
                 # For classification, select a random class with higher probability for the first class
@@ -5487,18 +5653,18 @@ def make_predictions(manual_clicks, file_clicks, manual_values, manual_ids, file
                 class_idx = 0  # Default to first class
                 inverse_mapping = target_info["inverse_mapping"]
                 prediction = inverse_mapping[class_idx]
-                
+
                 result = html.Div([
                     html.Div([
                         html.I(className="fas fa-magic mr-2", style={"color": "#1abc9c"}),
                         "Prediction Result:"
                     ], style={"color": "#1abc9c", "fontWeight": "bold", "marginBottom": "15px", "fontSize": "18px"}),
-                    
+
                     html.Div([
                         html.Strong(f"Predicted {target}: "),
                         html.Span(f"{prediction}", style={"color": "#1abc9c", "fontWeight": "bold", "fontSize": "18px"})
                     ], style={"marginBottom": "20px", "padding": "15px", "backgroundColor": "rgba(26, 188, 156, 0.1)", "borderRadius": "8px"}),
-                    
+
                     html.Div([
                         html.Strong("Top influential features:"),
                         html.Ul([
@@ -5506,24 +5672,24 @@ def make_predictions(manual_clicks, file_clicks, manual_values, manual_ids, file
                         ], style={"marginLeft": "20px", "marginTop": "10px"})
                     ], style={"color": "#e6e6e6"})
                 ])
-                
+
                 return result
             else:
                 # For regression, make a simple weighted sum prediction
                 # This is a simplification since we don't have the actual trained model
                 prediction = sum(X_processed[feature] * importance for feature, importance in importances.items() if feature in X_processed.columns)
-                
+
                 result = html.Div([
                     html.Div([
                         html.I(className="fas fa-magic mr-2", style={"color": "#1abc9c"}),
                         "Prediction Result:"
                     ], style={"color": "#1abc9c", "fontWeight": "bold", "marginBottom": "15px", "fontSize": "18px"}),
-                    
+
                     html.Div([
                         html.Strong(f"Predicted {target}: "),
                         html.Span(f"{prediction.values[0]:.3f}", style={"color": "#1abc9c", "fontWeight": "bold", "fontSize": "18px"})
                     ], style={"marginBottom": "20px", "padding": "15px", "backgroundColor": "rgba(26, 188, 156, 0.1)", "borderRadius": "8px"}),
-                    
+
                     html.Div([
                         html.Strong("Top influential features:"),
                         html.Ul([
@@ -5531,14 +5697,334 @@ def make_predictions(manual_clicks, file_clicks, manual_values, manual_ids, file
                         ], style={"marginLeft": "20px", "marginTop": "10px"})
                     ], style={"color": "#e6e6e6"})
                 ])
-                
+
                 return result
-    
+
     except Exception as e:
         return html.Div([
             html.I(className="fas fa-exclamation-circle mr-2", style={"color": "#ff6b6b"}),
             f"Error making prediction: {str(e)}"
         ], style={"color": "#ff6b6b"})
+
+# Callback for downloading imputed data as CSV
+@app.callback(
+    Output("download-imputed-csv", "data"),
+    [Input("download-imputed-csv-button", "n_clicks")],
+    [State("imputed-table", "data")],
+    prevent_initial_call=True,
+)
+def download_imputed_csv(n_clicks, data):
+    if not data:
+        return None
+
+    df = pd.DataFrame(data)
+    return dcc.send_data_frame(df.to_csv, "imputed_data.csv", index=False)
+
+# Callback for downloading imputed data as JSON
+@app.callback(
+    Output("download-imputed-json", "data"),
+    [Input("download-imputed-json-button", "n_clicks")],
+    [State("imputed-table", "data")],
+    prevent_initial_call=True,
+)
+def download_imputed_json(n_clicks, data):
+    if not data:
+        return None
+
+    df = pd.DataFrame(data)
+    return dict(content=df.to_json(orient="records"), filename="imputed_data.json")
+
+# Callback for downloading imputed data as Excel
+@app.callback(
+    Output("download-imputed-exc el", "data"),
+    [Input("download-imputed-excel-button", "n_clicks")],
+    [State("imputed-table", "data")],
+    prevent_initial_call=True,
+)
+def download_imputed_excel(n_clicks, data):
+    if not data:
+        return None
+
+    df = pd.DataFrame(data)
+    return dcc.send_data_frame(df.to_excel, "imputed_data.xlsx", sheet_name="Imputed Data", index=False)
+
+# Populate encoding column dropdown with categorical columns
+@app.callback(
+    Output("encoding_column_dropdown", "options"),
+    [Input("data-table", "data")],
+)
+def update_encoding_column_options(data):
+    if not data:
+        return []
+    import pandas as pd
+    df = pd.DataFrame(data)
+    categorical_cols = [col for col in df.columns if not pd.api.types.is_numeric_dtype(df[col])]
+    return [{"label": col, "value": col} for col in categorical_cols]
+
+# Show/hide ordinal order input
+@app.callback(
+    Output("encoding_ordinal_container", "children"),
+    [Input("encoding_method_dropdown", "value"), Input("encoding_column_dropdown", "value"), Input("data-table", "data")],
+)
+def show_ordinal_order_input(encoding_type, col, data):
+    import pandas as pd
+    # Always render the dropdown, but hide it unless needed
+    style = {"minHeight": "40px", **custom_css["dropdown"]}
+    if encoding_type != "ordinal" or not col or not data:
+        style["display"] = "none"
+        # Still return the dropdown, but hidden
+        return dcc.Dropdown(
+            id="encoding_ordinal_dropdown",
+            options=[],
+            value=[],
+            multi=True,
+            style=style,
+            className='dropdown-dark custom-dropdown'
+        )
+    df = pd.DataFrame(data)
+    if col not in df.columns:
+        style["display"] = "none"
+        return dcc.Dropdown(
+            id="encoding_ordinal_dropdown",
+            options=[],
+            value=[],
+            multi=True,
+            style=style,
+            className='dropdown-dark custom-dropdown'
+        )
+    unique_vals = list(map(str, sorted(df[col].dropna().unique(), key=str)))
+    # Always show all unique values as options, and set value to all unique values (sorted)
+    # Prevent removal by disabling options (Dash doesn't support reorder-only natively), so we add a note
+    return [
+        html.Label("Specify Order for Ordinal Encoding (all values required, drag to reorder):", style={"color": "#e6e6e6", "fontWeight": "bold", "marginBottom": "8px"}),
+        dcc.Dropdown(
+            id="encoding_ordinal_dropdown",
+            options=[{"label": v, "value": v, "disabled": False} for v in unique_vals],
+            value=unique_vals,
+            multi=True,
+            placeholder="Drag to reorder (top=lowest, bottom=highest)",
+            style=style,
+            className='dropdown-dark custom-dropdown'
+        ),
+        html.Div("(All values must be present. Drag to reorder. If you remove a value, it will be restored.)", style={"color": "#aaa", "fontSize": "12px", "marginTop": "5px"})
+    ]
+
+# Encoding callback
+@app.callback(
+    [
+        Output("encoding_preview_table", "data"),
+        Output("encoding_preview_table", "columns"),
+        Output("encoding_message", "children"),
+        Output("encoding_data_store", "data"),
+    ],
+    [
+        Input("encoding_apply_button", "n_clicks"),
+        Input("encoding_show_encoded_toggle", "value"),
+    ],
+    [
+        State("data-table", "data"),
+        State("encoding_column_dropdown", "value"),
+        State("encoding_method_dropdown", "value"),
+        State("encoding_data_store", "data"),
+        State("encoding_ordinal_dropdown", "value"),
+    ],
+    prevent_initial_call=True,
+)
+def apply_encoding(n_clicks, show_encoded_only, data, column, encoding_type, stored_encoded_df, ordinal_values):
+    ctx = dash.callback_context
+    trigger_id = ctx.triggered[0]["prop_id"].split(".")[0]
+
+    if not data:
+        return [], [], html.Div("No data available", style={"color": "red"}), None
+
+    if trigger_id == "encoding_apply_button":
+        if not column or not encoding_type:
+            return [], [], html.Div("Please select a column and encoding method", style={"color": "red"}), None
+
+        df = pd.DataFrame(data)
+
+        try:
+            # Create a copy of the original dataframe
+            encoded_df = df.copy()
+            encoded_column = None
+
+            # Apply the selected encoding
+            if encoding_type == "label":
+                # Label encoding
+                le = LabelEncoder()
+                encoded_df[f"{column}_encoded"] = le.fit_transform(df[column])
+                encoded_column = encoded_df[f"{column}_encoded"]
+
+                # Create a mapping dictionary for display
+                mapping = {i: label for i, label in enumerate(le.classes_)}
+                mapping_str = ", ".join([f"{k}: {v}" for k, v in mapping.items()])
+
+                message = html.Div([
+                    html.P(f"Label encoding applied to '{column}'", style={"color": "#1abc9c", "fontWeight": "bold"}),
+                    html.P(f"Mapping: {mapping_str}", style={"color": "#e6e6e6"})
+                ])
+
+                # Store data for download
+                store_data = {
+                    "full_df": encoded_df.to_dict("records"),
+                    "column_name": column,
+                    "encoded_column": {f"{column}_encoded": encoded_df[f"{column}_encoded"].tolist()},
+                    "encoding_type": "label",
+                    "mapping": mapping
+                }
+
+            elif encoding_type == "onehot":
+                # One-hot encoding
+                # Get dummies for the selected column
+                dummies = pd.get_dummies(df[column], prefix=column)
+
+                # Add the dummies to the original dataframe
+                encoded_df = pd.concat([df, dummies], axis=1)
+                encoded_column = dummies
+
+                # Create a message with the new columns
+                new_cols = dummies.columns.tolist()
+                new_cols_str = ", ".join(new_cols)
+
+                message = html.Div([
+                    html.P(f"One-hot encoding applied to '{column}'", style={"color": "#1abc9c", "fontWeight": "bold"}),
+                    html.P(f"New columns: {new_cols_str}", style={"color": "#e6e6e6"})
+                ])
+
+                # Store data for download
+                store_data = {
+                    "full_df": encoded_df.to_dict("records"),
+                    "column_name": column,
+                    "encoded_column": dummies.to_dict("records"),
+                    "encoding_type": "onehot",
+                    "new_columns": new_cols
+                }
+
+            elif encoding_type == "ordinal":
+                # Use the order provided by the user
+                if ordinal_values:
+                    # Create mapping based on the order in the dropdown
+                    ordinal_map = {val: i for i, val in enumerate(ordinal_values)}
+                else:
+                    # Fallback to sorted values if no order is provided
+                    unique_values = sorted(df[column].unique())
+                    ordinal_map = {val: i for i, val in enumerate(unique_values)}
+
+                encoded_df[f"{column}_ordinal"] = df[column].map(ordinal_map)
+                encoded_column = encoded_df[f"{column}_ordinal"]
+
+                # Create a mapping string for display
+                mapping_str = ", ".join([f"{v}: {k}" for k, v in ordinal_map.items()])
+
+                message = html.Div([
+                    html.P(f"Ordinal encoding applied to '{column}'", style={"color": "#1abc9c", "fontWeight": "bold"}),
+                    html.P(f"Mapping: {mapping_str}", style={"color": "#e6e6e6"})
+                ])
+
+                # Store data for download
+                store_data = {
+                    "full_df": encoded_df.to_dict("records"),
+                    "column_name": column,
+                    "encoded_column": {f"{column}_ordinal": encoded_df[f"{column}_ordinal"].tolist()},
+                    "encoding_type": "ordinal",
+                    "mapping": ordinal_map
+                }
+
+            # Return based on show_encoded_only toggle
+            if not show_encoded_only:
+                # Show full dataframe
+                columns = [{"name": col, "id": col} for col in encoded_df.columns]
+                return encoded_df.to_dict("records"), columns, message, store_data
+            else:
+                # Show only encoded columns
+                if encoding_type == "onehot":
+                    # For one-hot, show original column and all dummy columns
+                    display_cols = [column] + list(dummies.columns)
+                    display_df = encoded_df[display_cols]
+                    columns = [{"name": col, "id": col} for col in display_df.columns]
+                    return display_df.to_dict("records"), columns, message, store_data
+                else:
+                    # For label and ordinal, show original and encoded column
+                    encoded_col_name = f"{column}_encoded" if encoding_type == "label" else f"{column}_ordinal"
+                    display_df = encoded_df[[column, encoded_col_name]]
+                    columns = [{"name": col, "id": col} for col in display_df.columns]
+                    return display_df.to_dict("records"), columns, message, store_data
+
+        except Exception as e:
+            return [], [], html.Div(f"Error: {str(e)}", style={"color": "red"}), None
+
+    elif trigger_id == "encoding_show_encoded_toggle" and stored_encoded_df:
+        # Toggle between showing all columns or only encoded columns
+        df = pd.DataFrame(stored_encoded_df["full_df"])
+        encoding_type = stored_encoded_df["encoding_type"]
+        column_name = stored_encoded_df["column_name"]
+
+        if not show_encoded_only:
+            # Show full dataframe
+            columns = [{"name": col, "id": col} for col in df.columns]
+            return df.to_dict("records"), columns, dash.no_update, stored_encoded_df
+        else:
+            # Show only encoded columns
+            if encoding_type == "onehot":
+                # For one-hot, show original column and all dummy columns
+                new_columns = stored_encoded_df.get("new_columns", [])
+                display_cols = [column_name] + new_columns
+                display_df = df[display_cols]
+                columns = [{"name": col, "id": col} for col in display_df.columns]
+                return display_df.to_dict("records"), columns, dash.no_update, stored_encoded_df
+            else:
+                # For label and ordinal, show original and encoded column
+                encoded_col_name = f"{column_name}_encoded" if encoding_type == "label" else f"{column_name}_ordinal"
+                if encoded_col_name in df.columns:
+                    display_df = df[[column_name, encoded_col_name]]
+                    columns = [{"name": col, "id": col} for col in display_df.columns]
+                    return display_df.to_dict("records"), columns, dash.no_update, stored_encoded_df
+                else:
+                    return [], [], html.Div("Encoded column not found", style={"color": "red"}), stored_encoded_df
+
+    return [], [], dash.no_update, None
+
+# Download encoded data as CSV
+@app.callback(
+    Output("encoding_download_csv", "data"),
+    [Input("encoding_download_csv_button", "n_clicks")],
+    [State("encoding_data_store", "data")],
+    prevent_initial_call=True,
+)
+def download_encoded_csv(n_clicks, stored_data):
+    if not stored_data:
+        return None
+
+    df = pd.DataFrame(stored_data["full_df"])
+    return dcc.send_data_frame(df.to_csv, "encoded_data.csv", index=False)
+
+# Download encoded data as JSON
+@app.callback(
+    Output("encoding_download_json", "data"),
+    [Input("encoding_download_json_button", "n_clicks")],
+    [State("encoding_data_store", "data")],
+    prevent_initial_call=True,
+)
+def download_encoded_json(n_clicks, stored_data):
+    if not stored_data:
+        return None
+
+    df = pd.DataFrame(stored_data["full_df"])
+    return dcc.send_data_frame(df.to_json, "encoded_data.json", orient="records", date_format="iso")
+
+# Download encoded data as Excel
+@app.callback(
+    Output("encoding_download_excel", "data"),
+    [Input("encoding_download_excel_button", "n_clicks")],
+    [State("encoding_data_store", "data")],
+    prevent_initial_call=True,
+)
+def download_encoded_excel(n_clicks, stored_data):
+    if not stored_data:
+        return None
+
+    df = pd.DataFrame(stored_data["full_df"])
+    return dcc.send_data_frame(df.to_excel, "encoded_data.xlsx", sheet_name="Encoded Data", index=False)
 
 # Main entry point
 if __name__ == "__main__":
